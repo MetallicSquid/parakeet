@@ -1,0 +1,12 @@
+.Title-div {
+    text-align: center;
+    font-size: x-large;
+}
+
+.Gallery-div {
+    margin: 50px;
+    display: flex;
+    justify-content: center;
+    padding-left: 75px;
+    padding-right: 75px;
+}
