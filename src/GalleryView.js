@@ -1,13 +1,14 @@
 import './GalleryView.css';
 import React from 'react';
-import Card from '@mui/material/Card';
-import CardActionArea from '@mui/material/CardActionArea';
-import CardHeader from '@mui/material/CardHeader';
-import CardMedia from '@mui/material/CardMedia';
-import CardContent from '@mui/material/CardContent';
-import Typography from "@mui/material/Typography";
-import Grid from '@mui/material/Grid';
-import Box from "@mui/material/Box";
+import {
+    Card,
+    CardActionArea,
+    CardHeader,
+    CardMedia,
+    CardContent,
+    Typography,
+    Grid
+} from '@mui/material';
 
 function Title(author) {
     return (
@@ -43,48 +44,7 @@ function ModelCard(props) {
 
 class Gallery extends React.Component {
     gatherModelInfo() {
-        return [
-            {
-                id: "000001",
-                name: "Test Model",
-                date: "April 9, 2022",
-                image_path: "",
-                image_alt: "Test Model",
-                description: "A description for the test model."
-            },
-            {
-                id: "000002",
-                name: "Test Model",
-                date: "April 9, 2022",
-                image_path: "",
-                image_alt: "Test Model",
-                description: "A description for the test model."
-            },
-            {
-                id: "000003",
-                name: "Test Model",
-                date: "April 9, 2022",
-                image_path: "",
-                image_alt: "Test Model",
-                description: "A description for the test model."
-            },
-            {
-                id: "000004",
-                name: "Test Model",
-                date: "April 9, 2022",
-                image_path: "",
-                image_alt: "Test Model",
-                description: "A description for the test model."
-            },
-            {
-                id: "000005",
-                name: "Test Model",
-                date: "April 9, 2022",
-                image_path: "",
-                image_alt: "Test Model",
-                description: "A description for the test model."
-            }
-        ]
+
     }
 
     handleCardClick(id) {
@@ -97,23 +57,28 @@ class Gallery extends React.Component {
         return (
             <React.Fragment>
                 <div className="Gallery-div">
-                    <Box>
-                        <Grid container spacing={4}>
-                            {models.map(model => (
-                                <Grid item>
-                                    <ModelCard
-                                        key={model.id}
-                                        name={model.name}
-                                        date={model.date}
-                                        image_path={model.image_path}
-                                        image_alt={model.image_alt}
-                                        description={model.description}
-                                        onClick={() => this.handleCardClick(model.id)}
-                                    />
-                                </Grid>
-                            ))}
-                        </Grid>
-                    </Box>
+                    <Grid
+                        container
+                        spacing={{ xs: 2, md: 3 }}
+                        columns={{ xs: 4, sm: 8, md: 12 }}
+                        justifyContent="center"
+                        paddingLeft="50px"
+                        paddingRight="50px"
+                    >
+                        {models.map(model => (
+                            <Grid item>
+                                <ModelCard
+                                    key={model.id}
+                                    name={model.name}
+                                    date={model.date}
+                                    image_path={model.image_path}
+                                    image_alt={model.image_alt}
+                                    description={model.description}
+                                    onClick={() => this.handleCardClick(model.id)}
+                                />
+                            </Grid>
+                        ))}
+                    </Grid>
                 </div>
             </React.Fragment>
         );
