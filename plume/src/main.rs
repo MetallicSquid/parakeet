@@ -1,7 +1,11 @@
 // ***** Plume *****
 // Tool for the management of models in parakeet.
 // Commands:
-//  * index -> Traverses and indexes the models in the models directory
+//  * config        -> Sets up the plume configuration with the provided paths
+//  * config-wizard -> Wizard to set up the plume configuration
+//  * index         -> Traverses and indexes the models in the models directory
+
+mod config;
 
 use std::error::Error;
 use std::path::PathBuf;
@@ -13,28 +17,50 @@ use serde_json::Value;
 use serde::{Deserialize, Serialize};
 
 #[derive(StructOpt)]
-struct Cli {
-    /// Command type
-    command: String,
-    /// Model directory path
-    path: PathBuf,
+#[structopt(name = "plume", about = "Tool for the management of models in parakeet")]
+enum Commands {
+    /// Configure plume with the relevant path information
+    #[structopt(name = "config")]
+    Config {
+        /// Models directory path
+        models_path: PathBuf,
+        /// Public directory path
+        public_path: PathBuf,
+        /// Source directory path
+        source_path: PathBuf
+    },
+    /// Wizard to configure plume with the relevant path information
+    #[structopt(name = "config-wizard")]
+    ConfigWizard {},
+    /// Index the models directory and output an 'index.json' file
+    #[structopt(name = "index")]
+    Index {
+        /// Models directory path
+        models_path: PathBuf
+    }
 }
 
 fn main() {
-    let args = Cli::from_args();
-    let command: &str = args.command.trim();
-    let path: PathBuf = args.path;
-
-    let path_str: &str = path.to_str().unwrap();
-
-    match command {
-        "index" => {
-            match index(&path) {
-                Ok(_ok) => println!("Successfully indexed `{}`. Outputted to `{}{}`", path_str, path_str, "index.json"),
-                Err(error) => println!("Failed to index `{}`: [{}]", path_str , error)
+    match Commands::from_args() {
+        Commands::Config { models_path, public_path, source_path } => {
+            match config::config(models_path, public_path, source_path) {
+                Ok(_) => println!("Successfully configured plume. Plume is now ready to use."),
+                Err(error) => println!("Failed to configure plume: [{}]", error)
             }
         },
-        _ => panic!("Please provide a valid command. Use `plume help` for more information.")
+        Commands::ConfigWizard {} => {
+            match config::config_wizard() {
+                Ok(_) => {},
+                Err(error) => println!("Failed to configure plume: [{}]", error)
+            }
+        },
+        Commands::Index { models_path } => {
+            let path_str = models_path.to_str().unwrap();
+            match index(&models_path) {
+                Ok(_) => println!("Successfully indexed `{}`. Outputted to `{}{}`", path_str, path_str, "index.json"),
+                Err(error) => println!("Failed to index `{}`: [{}]", path_str , error)
+            }
+        }
     }
 }
 
@@ -46,7 +72,6 @@ struct Model {
     image_path: PathBuf,
     scad_path: PathBuf
 }
-
 
 // Traverse the provided models directory and extract the relevant files
 fn flatten_models_dir(path: &PathBuf, valid_model: bool) -> Result<Vec<(PathBuf, PathBuf, PathBuf)>, Box<dyn Error>> {
