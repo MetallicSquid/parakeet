@@ -1,9 +1,8 @@
-use confy::ConfyError::DirectoryCreationFailed;
 use serde::{Deserialize, Serialize};
 use std::error::Error;
 use std::fs::{DirEntry, metadata};
 use std::path::PathBuf;
-use std::{env, io};
+use std::env;
 
 #[derive(Serialize, Deserialize)]
 struct PlumeConfig {
@@ -66,31 +65,9 @@ pub fn config(models_path: PathBuf, public_path: PathBuf, source_path: PathBuf) 
     Ok(())
 }
 
-// Wizard to set up configuration for plume
-pub fn config_wizard() -> Result<(), Box<dyn Error>> {
-    println!("***** Config Setup Wizard *****");
-    println!("This wizard will set up the plume configuration. Enter your response or");
-    println!("leave blank to select the (default).\n");
+// Loads the 'models', 'public' and 'source' paths from the config
+pub fn get_paths() -> Result<Vec<PathBuf>, Box<dyn Error>> {
+    let config: PlumeConfig = confy::load("plume")?;
 
-    let previous_config: PlumeConfig = confy::load("plume")?;
-
-    let mut models_string: String = String::new();
-    println!("Parakeet models path ({}): ", previous_config.models_path.to_str().unwrap());
-    io::stdin().read_line(&mut models_string)?;
-    let mut public_string: String = String::new();
-    println!("Parakeet public path ({}): ", previous_config.public_path.to_str().unwrap());
-    io::stdin().read_line(&mut public_string)?;
-    let mut source_string: String = String::new();
-    println!("Parakeet source path ({}): ", previous_config.source_path.to_str().unwrap());
-    io::stdin().read_line(&mut source_string)?;
-
-    config(
-        PathBuf::from(models_string.trim()),
-        PathBuf::from(public_string.trim()),
-        PathBuf::from(source_string.trim()),
-    )?;
-
-    println!("\n***** All done! *****");
-
-    Ok(())
+    Ok(vec![config.models_path, config.public_path, config.source_path])
 }
