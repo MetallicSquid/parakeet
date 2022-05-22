@@ -85,6 +85,7 @@ struct Model {
     name: String,
     date: NaiveDate,
     description: String,
+    author: String,
     image_path: PathBuf,
     scad_path: PathBuf,
 }
@@ -143,6 +144,7 @@ fn index(path: &PathBuf) -> Result<(), Box<dyn Error>> {
             name: info_json["name"].as_str().unwrap().to_string(),
             date: NaiveDate::parse_from_str(info_json["date"].as_str().unwrap(), "%Y-%m-%d")?,
             description: info_json["description"].as_str().unwrap().to_string(),
+            author: info_json["author"].as_str().unwrap().to_string(),
             image_path: entry.0,
             scad_path: entry.1,
         });
@@ -200,6 +202,7 @@ fn distribute(
             name: model.name,
             date: model.date,
             description: model.description,
+            author: model.author,
             image_path: PathBuf::from(format!("images/{}.jpg", &model.id)),
             scad_path: PathBuf::from(format!("scad/{}.scad", &model.id)),
             id: model.id,
