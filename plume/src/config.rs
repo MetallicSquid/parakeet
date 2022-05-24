@@ -48,7 +48,6 @@ impl ::std::default::Default for PlumeConfig {
 
 // Sets up configuration for plume
 pub fn config(models_path: PathBuf, public_path: PathBuf, source_path: PathBuf) -> Result<(), Box<dyn Error>> {
-    // FIXME: Find a better way of determining if the paths exist
     metadata(&models_path)?;
     metadata(&public_path)?;
     metadata(&source_path)?;

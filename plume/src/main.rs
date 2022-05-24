@@ -9,6 +9,7 @@
 // TODO: Make some kind of git hook system that checks commits to the models directory
 
 mod config;
+mod parse;
 
 use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
@@ -62,7 +63,7 @@ fn main() {
             let path_str = config_models_path.to_str().unwrap();
             match index(config_models_path) {
                 Ok(_) => println!(
-                    "Successfully indexed `{}`. Outputted to `{}{}`",
+                    "Successfully indexed `{}`. Outputted to `{}/{}`",
                     path_str, path_str, "index.json"
                 ),
                 Err(error) => println!("Failed to index `{}`: [{}]", path_str, error),
@@ -86,39 +87,9 @@ struct Model {
     date: NaiveDate,
     description: String,
     author: String,
+    parameters: Vec<parse::Parameter>,
     image_path: PathBuf,
     scad_path: PathBuf,
-}
-
-// Traverse the provided models directory and extract the relevant files
-fn flatten_models_dir(
-    path: &PathBuf,
-    valid_model: bool,
-) -> Result<Vec<(PathBuf, PathBuf, PathBuf)>, Box<dyn Error>> {
-    let mut image_path: PathBuf = PathBuf::new();
-    let mut scad_path: PathBuf = PathBuf::new();
-    let mut info_path: PathBuf = PathBuf::new();
-    let mut model_vec: Vec<(PathBuf, PathBuf, PathBuf)> = Vec::new();
-
-    for entry in fs::read_dir(path)? {
-        let entry_path = entry?.path();
-        if entry_path.is_dir() && !valid_model {
-            let entry_contents = flatten_models_dir(&entry_path, true)?;
-            model_vec.extend(entry_contents);
-        } else if entry_path.extension().unwrap() == "jpg" && valid_model {
-            image_path = entry_path;
-        } else if entry_path.extension().unwrap() == "scad" && valid_model {
-            scad_path = entry_path;
-        } else if entry_path.extension().unwrap() == "json" && valid_model {
-            info_path = entry_path;
-        }
-    }
-
-    if valid_model {
-        Ok(vec![(image_path, scad_path, info_path)])
-    } else {
-        Ok(model_vec)
-    }
 }
 
 // Generate a 6 digit ID padded to the left by 0s
@@ -132,19 +103,27 @@ fn generate_id(i: i32) -> String {
 
 // Create an `index.json` file in the models directory linking to the relevant information
 fn index(path: &PathBuf) -> Result<(), Box<dyn Error>> {
-    let flattened_models = flatten_models_dir(path, false)?;
+    let flattened_models = parse::parse_models_dir(path, false)?;
     let mut models: Vec<Model> = Vec::new();
     let mut counter: i32 = 0;
 
     for entry in flattened_models {
-        let info_string = fs::read_to_string(entry.2)?;
+        let info_string = fs::read_to_string(&entry.2)?;
         let info_json: Value = serde_json::from_str(&info_string)?;
+
+        let parameters = parse::parse_parameters(
+            &info_json["parameters"].as_array().unwrap(),
+            info_json["name"].to_string(),
+            &entry.1
+        )?;
+
         models.push(Model {
             id: generate_id(counter),
             name: info_json["name"].as_str().unwrap().to_string(),
-            date: NaiveDate::parse_from_str(info_json["date"].as_str().unwrap(), "%Y-%m-%d")?,
+            date: NaiveDate::parse_from_str(&info_json["date"].as_str().unwrap().to_string(), "%Y-%m-%d")?,
             description: info_json["description"].as_str().unwrap().to_string(),
             author: info_json["author"].as_str().unwrap().to_string(),
+            parameters,
             image_path: entry.0,
             scad_path: entry.1,
         });
@@ -164,7 +143,7 @@ fn distribute(
     public_path: &PathBuf,
     src_path: &PathBuf,
 ) -> Result<(), Box<dyn Error>> {
-    let index_string = fs::read_to_string(PathBuf::from(models_path).join("index.json"))?;
+    let index_string: String = fs::read_to_string(PathBuf::from(models_path).join("index.json"))?;
     let index_json: Vec<Model> = serde_json::from_str(&index_string)?;
 
     let scad_path = public_path.join(format!("scad/"));
@@ -203,6 +182,7 @@ fn distribute(
             date: model.date,
             description: model.description,
             author: model.author,
+            parameters: model.parameters,
             image_path: PathBuf::from(format!("images/{}.jpg", &model.id)),
             scad_path: PathBuf::from(format!("scad/{}.scad", &model.id)),
             id: model.id,
