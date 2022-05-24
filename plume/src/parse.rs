@@ -65,11 +65,19 @@ pub struct Parameter {
 
 // Errors related to parameter parsing
 #[derive(Debug)]
-struct ParamError(String);
+enum ParamError {
+    InvalidFormatting(String),
+    DoesNotExist(String),
+}
 
 impl fmt::Display for ParamError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "invalid parameter formatting for '{}'", self.0)
+        match self {
+            ParamError::InvalidFormatting(name) => {
+                write!(f, "invalid parameter formatting for '{}'", name)
+            }
+            ParamError::DoesNotExist(name) => write!(f, "the '{}' parameter does not exist", name),
+        }
     }
 }
 
@@ -127,6 +135,10 @@ pub fn parse_parameters(
                     default: ParamType::BoolParam(parameter["default"].as_bool().unwrap()),
                     restriction: ParamRestriction::NoRestriction,
                 })
+            } else {
+                Err(ParamError::InvalidFormatting(
+                    parameter["name"].as_str().unwrap().to_string(),
+                ))?;
             }
         } else if parameter["default"].is_i64() {
             // Integer parameter
@@ -185,7 +197,9 @@ pub fn parse_parameters(
                     restriction: ParamRestriction::IntListRestriction(allowed),
                 });
             } else {
-                Err(ParamError(parameter["name"].as_str().unwrap().to_string()))?;
+                Err(ParamError::InvalidFormatting(
+                    parameter["name"].as_str().unwrap().to_string(),
+                ))?;
             }
         } else if parameter["default"].is_f64() {
             // Float parameter
@@ -244,7 +258,9 @@ pub fn parse_parameters(
                     restriction: ParamRestriction::FloatListRestriction(allowed),
                 });
             } else {
-                Err(ParamError(parameter["name"].as_str().unwrap().to_string()))?;
+                Err(ParamError::InvalidFormatting(
+                    parameter["name"].as_str().unwrap().to_string(),
+                ))?;
             }
         } else if parameter["default"].is_string() {
             // String parameter
@@ -313,7 +329,9 @@ pub fn parse_parameters(
                     restriction: ParamRestriction::StringListRestriction(allowed),
                 });
             } else {
-                Err(ParamError(parameter["name"].as_str().unwrap().to_string()))?;
+                Err(ParamError::InvalidFormatting(
+                    parameter["name"].as_str().unwrap().to_string(),
+                ))?;
             }
         } else {
             Err(TypeError(parameter["name"].as_str().unwrap().to_string()))?;
@@ -325,11 +343,20 @@ pub fn parse_parameters(
     Ok(parsed_parameters)
 }
 
+// Checks that the provided parameters exist and follow the described type
+// FIXME: This currently provides very little in the way of actual validation
 fn validate_parameters(
     parameters: &Vec<Parameter>,
     scad_path: &PathBuf,
 ) -> Result<(), Box<dyn Error>> {
-    let scad_string = fs::read_to_string(scad_path)?;
-    // TODO: Validate that the provided parameters do exist
+    let scad_string: String = fs::read_to_string(scad_path)?;
+    for parameter in parameters {
+        if !scad_string.contains(&parameter.name) {
+            Err(ParamError::DoesNotExist(
+                parameter.name.to_string(),
+            ))?;
+        }
+    }
+
     Ok(())
 }
