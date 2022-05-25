@@ -17,6 +17,7 @@
 /models
 /public/images/
 /public/scad/
+*.json
 
 # misc
 .DS_Store

@@ -46,7 +46,6 @@ function ModelCard(props) {
 }
 
 class Gallery extends React.Component {
-
     render() {
         return (
             <React.Fragment>

@@ -2,7 +2,16 @@ import './ModelView.css';
 import models from '../src/index.json'
 
 import { useParams } from 'react-router-dom';
+import {
+    IntRange,
+    IntList
+} from './ParameterElements'
 import React from 'react';
+import {
+    Grid,
+    Paper
+} from "@mui/material";
+
 
 function GatherModelInfo(id) {
     for (let i = 0; i < models.length; i++) {
@@ -22,6 +31,15 @@ function Title(name, author) {
     )
 }
 
+function Parameters(parameters) {
+    return (
+        <div>
+            {IntRange(parameters[0])}
+            {IntList(parameters[1])}
+        </div>
+    )
+}
+
 
 function ModelView() {
     const { id } = useParams();
@@ -32,13 +50,21 @@ function ModelView() {
     return(
         <div className="GalleryView-div">
             {Title(model.name, model.author)}
-            {/*<Parameters*/}
-            {/*    description={model.description}*/}
-            {/*    parameters={model.parameters}*/}
-            {/*/>*/}
-            {/*<Model*/}
-            {/*    scad={model.scad_path}*/}
-            {/*/>*/}
+            <Grid container spacing={4} justifyContent="center">
+                {/*<Description*/}
+                {/*    description={model.description}*/}
+                {/*/>*/}
+                <Grid item >
+                    <Paper variant="outlined" className="Parameter-paper">
+                        {Parameters(model.parameters)}
+                    </Paper>
+                </Grid>
+
+                {/*<Model*/}
+                {/*    scad={model.scad_path}*/}
+                {/*/>*/}
+            </Grid>
+
 
         </div>
     )
