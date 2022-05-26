@@ -49,7 +49,7 @@ pub enum ParamType {
 pub enum ParamRestriction {
     IntRangeRestriction { lower: i64, upper: i64 },
     FloatRangeRestriction { lower: f64, upper: f64 },
-    StringLengthRestriction { min_length: i64, max_length: i64 },
+    StringLengthRestriction(i64),
     IntListRestriction(Vec<i64>),
     FloatListRestriction(Vec<f64>),
     StringListRestriction(Vec<String>),
@@ -129,6 +129,7 @@ pub fn parse_parameters(
             if parameter["lower"].is_null()
                 && parameter["upper"].is_null()
                 && parameter["upper"].is_null()
+                && parameter["maximum"].is_null()
             {
                 parsed_parameters.push(Parameter {
                     name: parameter["name"].as_str().unwrap().to_string(),
@@ -145,6 +146,7 @@ pub fn parse_parameters(
             if parameter["lower"].is_i64()
                 && parameter["upper"].is_i64()
                 && parameter["allowed"].is_null()
+                && parameter["maximum"].is_null()
             {
                 // Range restricted
                 if parameter["lower"].as_i64() < parameter["upper"].as_i64() {
@@ -174,6 +176,7 @@ pub fn parse_parameters(
             } else if parameter["allowed"].is_array()
                 && parameter["lower"].is_null()
                 && parameter["upper"].is_null()
+                && parameter["maximum"].is_null()
             {
                 // List restricted
                 let mut allowed: Vec<i64> = Vec::new();
@@ -203,9 +206,10 @@ pub fn parse_parameters(
             }
         } else if parameter["default"].is_f64() {
             // Float parameter
-            if parameter["lower"].is_f64()
-                && parameter["upper"].is_f64()
+            if (parameter["lower"].is_f64() || parameter["lower"].is_i64())
+                && (parameter["upper"].is_f64() || parameter["upper"].is_i64())
                 && parameter["allowed"].is_null()
+                && parameter["maximum"].is_null()
             {
                 // Range restricted
                 if parameter["lower"].as_f64() < parameter["upper"].as_f64() {
@@ -235,11 +239,12 @@ pub fn parse_parameters(
             } else if parameter["allowed"].is_array()
                 && parameter["lower"].is_null()
                 && parameter["upper"].is_null()
+                && parameter["maximum"].is_null()
             {
                 // List restricted
                 let mut allowed: Vec<f64> = Vec::new();
                 for element in parameter["allowed"].as_array().unwrap() {
-                    if element.is_f64() {
+                    if element.is_f64() || element.is_i64() {
                         let float_element = element.as_f64().unwrap();
                         if !allowed.contains(&float_element) {
                             allowed.push(float_element)
@@ -264,37 +269,19 @@ pub fn parse_parameters(
             }
         } else if parameter["default"].is_string() {
             // String parameter
-            if parameter["lower"].is_string()
-                && parameter["upper"].is_string()
+            if parameter["maximum"].is_i64()
+                && parameter["upper"].is_null()
+                && parameter["lower"].is_null()
                 && parameter["allowed"].is_null()
             {
                 // Range restricted
-                if parameter["lower"].as_str().unwrap().len()
-                    < parameter["upper"].as_str().unwrap().len()
-                {
+                if parameter["maximum"].as_i64().unwrap() > 0 {
                     parsed_parameters.push(Parameter {
                         name: parameter["name"].as_str().unwrap().to_string(),
                         default: ParamType::StringParam(
                             parameter["default"].as_str().unwrap().to_string(),
                         ),
-                        restriction: ParamRestriction::StringLengthRestriction {
-                            min_length: parameter["lower"].as_i64().unwrap(),
-                            max_length: parameter["upper"].as_i64().unwrap(),
-                        },
-                    });
-                } else if parameter["lower"].as_str().unwrap().len()
-                    > parameter["upper"].as_str().unwrap().len()
-                {
-                    println!("Warning: 'lower' and 'upper' fields for the '{}' parameter in the '{}' model have been swapped", parameter["name"], model_name);
-                    parsed_parameters.push(Parameter {
-                        name: parameter["name"].as_str().unwrap().to_string(),
-                        default: ParamType::StringParam(
-                            parameter["default"].as_str().unwrap().to_string(),
-                        ),
-                        restriction: ParamRestriction::StringLengthRestriction {
-                            min_length: parameter["upper"].as_i64().unwrap(),
-                            max_length: parameter["lower"].as_i64().unwrap(),
-                        },
+                        restriction: ParamRestriction::StringLengthRestriction(parameter["maximum"].as_i64().unwrap())
                     });
                 } else {
                     Err(RestrictionError::InvalidRange(
@@ -304,6 +291,7 @@ pub fn parse_parameters(
             } else if parameter["allowed"].is_array()
                 && parameter["lower"].is_null()
                 && parameter["upper"].is_null()
+                && parameter["maximum"].is_null()
             {
                 // List restricted
                 let mut allowed: Vec<String> = Vec::new();
@@ -352,9 +340,7 @@ fn validate_parameters(
     let scad_string: String = fs::read_to_string(scad_path)?;
     for parameter in parameters {
         if !scad_string.contains(&parameter.name) {
-            Err(ParamError::DoesNotExist(
-                parameter.name.to_string(),
-            ))?;
+            Err(ParamError::DoesNotExist(parameter.name.to_string()))?;
         }
     }
 

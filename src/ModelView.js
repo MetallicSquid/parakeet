@@ -4,12 +4,17 @@ import models from '../src/index.json'
 import { useParams } from 'react-router-dom';
 import {
     IntRange,
-    IntList
+    FloatRange,
+    StringLength,
+    IntList,
+    FloatList,
+    StringList,
+    BoolCheck
 } from './ParameterElements'
 import React from 'react';
 import {
     Grid,
-    Paper
+    Paper, Typography
 } from "@mui/material";
 
 
@@ -36,25 +41,29 @@ function Parameters(parameters) {
         <div>
             {IntRange(parameters[0])}
             {IntList(parameters[1])}
+            {FloatRange(parameters[2])}
+            {FloatList(parameters[3])}
+            {StringLength(parameters[4])}
+            {StringList(parameters[5])}
+            {BoolCheck(parameters[6])}
+
         </div>
     )
 }
-
 
 function ModelView() {
     const { id } = useParams();
     const model = GatherModelInfo(id);
 
     // TODO: Implement the functions and classes below
-    // TODO: Make a nicer grid layout
     return(
         <div className="GalleryView-div">
             {Title(model.name, model.author)}
             <Grid container spacing={4} justifyContent="center">
-                {/*<Description*/}
-                {/*    description={model.description}*/}
-                {/*/>*/}
-                <Grid item >
+                <Grid item>
+                    <Paper variant="outlined" className="Parameter-paper">
+                        <Typography>{model.description}</Typography>
+                    </Paper>
                     <Paper variant="outlined" className="Parameter-paper">
                         {Parameters(model.parameters)}
                     </Paper>
