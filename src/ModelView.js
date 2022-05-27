@@ -3,20 +3,15 @@ import models from '../src/index.json'
 
 import { useParams } from 'react-router-dom';
 import {
-    IntRange,
-    FloatRange,
-    StringLength,
-    IntList,
-    FloatList,
-    StringList,
-    BoolCheck
+    RenderParam
 } from './ParameterElements'
-import React from 'react';
+import React, {useState} from 'react';
 import {
     Grid,
-    Paper, Typography
+    Paper,
+    Typography,
+    Button
 } from "@mui/material";
-
 
 function GatherModelInfo(id) {
     for (let i = 0; i < models.length; i++) {
@@ -37,17 +32,43 @@ function Title(name, author) {
 }
 
 function Parameters(parameters) {
-    return (
-        <div>
-            {IntRange(parameters[0])}
-            {IntList(parameters[1])}
-            {FloatRange(parameters[2])}
-            {FloatList(parameters[3])}
-            {StringLength(parameters[4])}
-            {StringList(parameters[5])}
-            {BoolCheck(parameters[6])}
+    const default_values = {};
 
-        </div>
+    for (let i = 0; i < parameters.length; i++) {
+        if (parameters[i].default.IntParam) {
+            default_values[i] = parameters[i].default.IntParam;
+        } else if (parameters[i].default.FloatParam) {
+            default_values[i] = parameters[i].default.FloatParam;
+        } else if (parameters[i].default.StringParam) {
+            default_values[i] = parameters[i].default.StringParam;
+        } else {
+            default_values[i] = parameters[i].default.BoolParam;
+        }
+    }
+
+    const [formValues, setFormValues] = useState(default_values);
+
+    // TODO: Make use of the data returned from here
+    const handleSubmit = (event) => {
+        event.preventDefault();
+        console.log(formValues);
+    }
+
+    return (
+        <form onSubmit={handleSubmit}>
+            {parameters.map((parameter, index) => (
+                RenderParam(parameter, index, formValues, setFormValues)
+            ))}
+
+            <Button
+                className="Submit-button"
+                variant="outlined"
+                type="submit"
+                fullWidth
+            >
+                Submit
+            </Button>
+        </form>
     )
 }
 
@@ -60,26 +81,25 @@ function ModelView() {
         <div className="GalleryView-div">
             {Title(model.name, model.author)}
             <Grid container spacing={4} justifyContent="center">
-                <Grid item>
-                    <Paper variant="outlined" className="Parameter-paper">
+                <Grid item xs={3.5}>
+                    <Paper elevation={1} className="Parameter-paper">
                         <Typography>{model.description}</Typography>
                     </Paper>
-                    <Paper variant="outlined" className="Parameter-paper">
+                    <Paper elevation={1} className="Parameter-paper">
                         {Parameters(model.parameters)}
                     </Paper>
                 </Grid>
-
-                {/*<Model*/}
-                {/*    scad={model.scad_path}*/}
-                {/*/>*/}
+                <Grid item xs={5.5}>
+                    <Paper elevation={1} className="Parameter-paper">
+                        {/*<Model*/}
+                        {/*    scad={model.scad_path}*/}
+                        {/*/>*/}
+                    </Paper>
+                </Grid>
             </Grid>
-
-
         </div>
     )
 }
-
-
 
 export default ModelView;
 
