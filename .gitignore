@@ -3,6 +3,8 @@
 # rust
 /plume/target
 /plume/Cargo.lock
+/roost/target
+/roost/Cargo.lock
 
 # dependencies
 /node_modules

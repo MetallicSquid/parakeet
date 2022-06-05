@@ -1,0 +1,17 @@
+[package]
+name = "roost"
+version = "0.1.0"
+authors = ["MetallicSquid"]
+edition = "2021"
+license = "GPL-3.0-or-later"
+license-file = "LICENSE"
+readme = "README.md"
+homepage = "https://github.com/MetallicSquid/parakeet"
+repository = "https://github.com/MetallicSquid/parakeet"
+keywords = ["cli", "parakeet", "tool"]
+categories = ["command-line-utilities"]
+
+[dependencies]
+rocket = { version = "0.5.0-rc.2", features=["json"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
