@@ -4,11 +4,11 @@
 }
 
 .Model-title-div h1 {
-    margin: 2px;
+    margin-bottom:  0;
 }
 
 .Model-title-div h3 {
-    margin: 2px;
+    margin-top: 0;
 }
 
 .Parameter-paper {

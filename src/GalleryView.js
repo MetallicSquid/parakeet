@@ -15,7 +15,7 @@ import { Link } from 'react-router-dom'
 
 function ModelCard(props) {
     return (
-        <Card sx={{ width: 354 }} className={props.id}>
+        <Card sx={{ width: 300 }} className={props.id}>
             <CardActionArea component={Link} to={'/' + props.id}>
                 <CardHeader
                     title={props.name}
@@ -39,15 +39,13 @@ function ModelCard(props) {
 class Gallery extends React.Component {
     render() {
         return (
-            <React.Fragment>
+            <>
                 <div className="Gallery-div">
                     <Grid
                         container
                         spacing={{ xs: 2, md: 3 }}
                         columns={{ xs: 4, sm: 8, md: 12 }}
                         justifyContent="center"
-                        paddingLeft="50px"
-                        paddingRight="50px"
                     >
                         {models.map(model => (
                             <Grid item>
@@ -62,7 +60,7 @@ class Gallery extends React.Component {
                         ))}
                     </Grid>
                 </div>
-            </React.Fragment>
+            </>
        );
     }
 }
