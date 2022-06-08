@@ -1,19 +1,26 @@
 import './ModelView.css';
 import models from '../src/index.json'
 
+// FIXME: For now, this just points to a static `stl_test.stl` file
+import stl_file from './stl_test.stl'
+
 import { useParams } from 'react-router-dom';
-import {
-    RenderParam
-} from './ParameterElements'
-import React, {useState} from 'react';
+import { RenderParam } from './ParameterElements'
+import React, {Suspense, useEffect, useRef, useState} from 'react';
 import {
     Grid,
     Paper,
     Typography,
-    Button
+    Button,
 } from "@mui/material";
+import {STLLoader} from "three/examples/jsm/loaders/STLLoader";
+import {OrbitControls} from "three/examples/jsm/controls/OrbitControls"
+import {Canvas, extend, useFrame, useLoader, useThree} from "@react-three/fiber";
 
-function GatherModelInfo(id) {
+extend({ OrbitControls });
+
+function GatherModelInfo() {
+    const { id } = useParams();
     for (let i = 0; i < models.length; i++) {
         if (models[i].id === id) {
             return models[i]
@@ -22,16 +29,7 @@ function GatherModelInfo(id) {
     return {}
 }
 
-function Title(name, author) {
-    return (
-        <div className="Model-title-div">
-            <h1 className="Title-heading">{name}</h1>
-            <h3 className="Author-subheading">by {author}</h3>
-        </div>
-    )
-}
-
-function Parameters(parameters) {
+function Parameters(parameters, id, onSTLChange) {
     const default_values = {};
 
     for (let i = 0; i < parameters.length; i++) {
@@ -48,10 +46,19 @@ function Parameters(parameters) {
 
     const [formValues, setFormValues] = useState(default_values);
 
-    // TODO: Make use of the data returned from here
     const handleSubmit = (event) => {
         event.preventDefault();
-        console.log(formValues);
+
+        const url = 'api/generate/' + id;
+        const request = new Request(url, {
+            method: 'POST',
+            body: JSON.stringify(formValues),
+            headers: new Headers({
+                'Content-Type': 'application/json'
+            })
+        })
+
+        fetch(request).then(res => onSTLChange(res));
     }
 
     return (
@@ -72,28 +79,65 @@ function Parameters(parameters) {
     )
 }
 
-function ModelView() {
-    const { id } = useParams();
-    const model = GatherModelInfo(id);
+function STL(stl) {
+    const geometry = useLoader(STLLoader, stl.stl);
+    const ref = useRef();
+    const { camera } = useThree();
+    useEffect(() => {
+        camera.lookAt(ref.current.position);
+    });
 
-    // TODO: Implement the functions and classes below
-    return(
+    return (
+        <>
+            <mesh ref={ref}>
+                <primitive object={geometry} attach="geometry" />
+                <meshStandardMaterial color={"orange"} />
+            </mesh>
+            <ambientLight />
+            <pointLight position={[10, 10, 10]} />
+        </>
+    );
+}
+
+function ModelView() {
+    const model = GatherModelInfo();
+
+    const CameraControls = () => {
+        const { camera, gl: { domElement} } = useThree();
+        const controls = useRef();
+        useFrame((state) => controls.current.update());
+        return <orbitControls ref={controls} args={[camera, domElement]} />;
+    }
+
+    const [stl, setStl] = useState(stl_file);
+
+    const onSTLChange = (new_stl) => {
+        setStl(new_stl);
+    }
+
+    return (
         <div className="GalleryView-div">
-            {Title(model.name, model.author)}
+            <div className="Model-title-div">
+                <h1 className="Title-heading">{model.name}</h1>
+                <h3 className="Author-subheading">by {model.author}</h3>
+            </div>
             <Grid container spacing={4} justifyContent="center">
-                <Grid item xs={3.5}>
+                <Grid item xs={4.5}>
                     <Paper elevation={1} className="Parameter-paper">
                         <Typography>{model.description}</Typography>
                     </Paper>
                     <Paper elevation={1} className="Parameter-paper">
-                        {Parameters(model.parameters)}
+                        {Parameters(model.parameters, model.id, onSTLChange)}
                     </Paper>
                 </Grid>
-                <Grid item xs={5.5}>
+                <Grid item xs={6.5}>
                     <Paper elevation={1} className="Parameter-paper">
-                        {/*<Model*/}
-                        {/*    scad={model.scad_path}*/}
-                        {/*/>*/}
+                        <Canvas camera={{position: [0, 10, 20]}}>
+                            <Suspense fallback={null}>
+                                <STL stl={stl} />
+                            </Suspense>
+                            <CameraControls />
+                        </Canvas>
                     </Paper>
                 </Grid>
             </Grid>
@@ -102,4 +146,3 @@ function ModelView() {
 }
 
 export default ModelView;
-

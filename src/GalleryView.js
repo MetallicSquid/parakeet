@@ -11,21 +11,12 @@ import {
     Typography,
     Grid
 } from '@mui/material';
-
 import { Link } from 'react-router-dom'
-
-function Title(author) {
-    return (
-        <div className="Title-div">
-            <h1 className="Title-heading">🦜 {author}'s Parakeet 🦜</h1>
-        </div>
-    );
-}
 
 function ModelCard(props) {
     return (
         <Card sx={{ width: 354 }} className={props.id}>
-            <CardActionArea component={Link} to={'/'+ props.id}>
+            <CardActionArea component={Link} to={'/' + props.id}>
                 <CardHeader
                     title={props.name}
                     subheader={props.date}
@@ -72,7 +63,7 @@ class Gallery extends React.Component {
                     </Grid>
                 </div>
             </React.Fragment>
-    );
+       );
     }
 }
 
@@ -85,7 +76,9 @@ class GalleryView extends React.Component {
         const author = this.gatherSiteInfo();
         return (
             <div className="GalleryView-div">
-                {Title("Guillaume")}
+                <div className="Title-div">
+                    <h1 className="Title-heading">🦜 Guillaume's Parakeet 🦜</h1>
+                </div>
                 <Gallery />
             </div>
         );
