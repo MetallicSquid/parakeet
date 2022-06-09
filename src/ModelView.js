@@ -5,19 +5,22 @@ import models from '../src/index.json'
 import stl_file from './stl_test.stl'
 
 import { useParams } from 'react-router-dom';
-import { RenderParam } from './ParameterElements'
-import React, {Suspense, useEffect, useRef, useState} from 'react';
+import { RenderParam } from './ParameterElements';
+import {
+    RenderSTL,
+    CameraControls
+} from "./STLElements";
+import React, {Suspense, useState} from 'react';
 import {
     Grid,
     Paper,
     Typography,
     Button,
+    CardActions,
+    CardContent, Box
 } from "@mui/material";
-import {STLLoader} from "three/examples/jsm/loaders/STLLoader";
-import {OrbitControls} from "three/examples/jsm/controls/OrbitControls"
-import {Canvas, extend, useFrame, useLoader, useThree} from "@react-three/fiber";
-
-extend({ OrbitControls });
+import {AxesHelper} from "three";
+import {Canvas} from "@react-three/fiber";
 
 function GatherModelInfo() {
     const { id } = useParams();
@@ -63,51 +66,27 @@ function Parameters(parameters, id, onSTLChange) {
 
     return (
         <form onSubmit={handleSubmit}>
-            {parameters.map((parameter, index) => (
-                RenderParam(parameter, index, formValues, setFormValues)
-            ))}
-
-            <Button
-                className="Submit-button"
-                variant="outlined"
-                type="submit"
-                fullWidth
-            >
-                Submit
-            </Button>
+            <CardContent>
+                {parameters.map((parameter, index) => (
+                    RenderParam(parameter, index, formValues, setFormValues)
+                ))}
+            </CardContent>
+            <CardActions>
+                <Button
+                    className="Submit-button"
+                    variant="outlined"
+                    type="submit"
+                    fullWidth
+                >
+                    Submit
+                </Button>
+            </CardActions>
         </form>
     )
 }
 
-function STL(stl) {
-    const geometry = useLoader(STLLoader, stl.stl);
-    const ref = useRef();
-    const { camera } = useThree();
-    useEffect(() => {
-        camera.lookAt(ref.current.position);
-    });
-
-    return (
-        <>
-            <mesh ref={ref}>
-                <primitive object={geometry} attach="geometry" />
-                <meshStandardMaterial color={"orange"} />
-            </mesh>
-            <ambientLight />
-            <pointLight position={[10, 10, 10]} />
-        </>
-    );
-}
-
 function ModelView() {
     const model = GatherModelInfo();
-
-    const CameraControls = () => {
-        const { camera, gl: { domElement} } = useThree();
-        const controls = useRef();
-        useFrame((state) => controls.current.update());
-        return <orbitControls ref={controls} args={[camera, domElement]} />;
-    }
 
     const [stl, setStl] = useState(stl_file);
 
@@ -116,28 +95,32 @@ function ModelView() {
     }
 
     return (
-        <div className="GalleryView-div">
+        <div className="ModelView-div">
             <div className="Model-title-div">
                 <h1 className="Title-heading">{model.name}</h1>
                 <h3 className="Author-subheading">by {model.author}</h3>
             </div>
-            <Grid container spacing={4} justifyContent="center">
+            <Grid container spacing={4} justifyContent="center" style={{height: "86vh"}}>
                 <Grid item xs={4.5}>
-                    <Paper elevation={1} className="Parameter-paper">
+                    <Paper elevation={1} className="Parameter-paper" style={{height: "10%"}}>
                         <Typography>{model.description}</Typography>
                     </Paper>
-                    <Paper elevation={1} className="Parameter-paper">
+                    <Paper elevation={1} className="Parameter-paper" style={{height: "70%"}}>
                         {Parameters(model.parameters, model.id, onSTLChange)}
                     </Paper>
                 </Grid>
                 <Grid item xs={6.5}>
-                    <Paper elevation={1} className="Parameter-paper">
+                    <Paper elevation={1} className="Parameter-paper" style={{height: "70%"}}>
                         <Canvas camera={{position: [0, 10, 20]}}>
                             <Suspense fallback={null}>
-                                <STL stl={stl} />
+                                <RenderSTL stl={stl} />
                             </Suspense>
+                            <primitive object={new AxesHelper(20)} />
                             <CameraControls />
                         </Canvas>
+                    </Paper>
+                    <Paper elevation={1} className="Parameter-paper" style={{height: "10%"}}>
+
                     </Paper>
                 </Grid>
             </Grid>
