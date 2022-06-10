@@ -22,7 +22,7 @@ const light = {
         },
         mode: "light"
     }
-}
+};
 
 const dark = {
     palette: {
@@ -31,7 +31,7 @@ const dark = {
         },
         mode: "dark"
     }
-}
+};
 
 root.render(
     <React.StrictMode>

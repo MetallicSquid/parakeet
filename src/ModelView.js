@@ -8,7 +8,11 @@ import { useParams } from 'react-router-dom';
 import { RenderParam } from './ParameterElements';
 import {
     RenderSTL,
-    CameraControls
+    CameraControls,
+    Axes,
+    TimeSinceUpdate,
+    CheckAutoRotate,
+    CheckAxes
 } from "./STLElements";
 import React, {Suspense, useState} from 'react';
 import {
@@ -17,9 +21,10 @@ import {
     Typography,
     Button,
     CardActions,
-    CardContent, Box
+    CardContent,
+    Box,
+    Stack
 } from "@mui/material";
-import {AxesHelper} from "three";
 import {Canvas} from "@react-three/fiber";
 
 function GatherModelInfo() {
@@ -89,9 +94,19 @@ function ModelView() {
     const model = GatherModelInfo();
 
     const [stl, setStl] = useState(stl_file);
+    const [autoRotate, setAutoRotate] = useState(true);
+    const [axes, setAxes] = useState(true);
 
     const onSTLChange = (new_stl) => {
         setStl(new_stl);
+    }
+
+    const onAutoRotateChange = (event) => {
+        setAutoRotate(event.target.checked);
+    }
+
+    const onAxesChange = (event) => {
+        setAxes(event.target.checked);
     }
 
     return (
@@ -111,13 +126,25 @@ function ModelView() {
                 </Grid>
                 <Grid item xs={6.5}>
                     <Paper elevation={1} className="Parameter-paper" style={{height: "70%"}}>
-                        <Canvas camera={{position: [0, 10, 20]}}>
+                        <Canvas camera={{position: [0, 10, 20]}} style={{height: "90%"}}>
                             <Suspense fallback={null}>
                                 <RenderSTL stl={stl} />
                             </Suspense>
-                            <primitive object={new AxesHelper(20)} />
-                            <CameraControls />
+                            <Axes axes={axes} />
+                            <CameraControls autoRotate={autoRotate} />
                         </Canvas>
+                        <Box className="Controls-box">
+                            <Stack
+                                direction="row"
+                                justifyContent="flex-start"
+                                alignItems="center"
+                                spacing={4}
+                            >
+                                <TimeSinceUpdate />
+                                {CheckAutoRotate(onAutoRotateChange)}
+                                {CheckAxes(onAxesChange)}
+                            </Stack>
+                        </Box>
                     </Paper>
                     <Paper elevation={1} className="Parameter-paper" style={{height: "10%"}}>
 
