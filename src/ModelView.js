@@ -37,18 +37,20 @@ function GatherModelInfo() {
     return {}
 }
 
-function Parameters(parameters, id, onSTLChange) {
+function ParamView(modules, id, onSTLChange) {
     const default_values = {};
 
-    for (let i = 0; i < parameters.length; i++) {
-        if (parameters[i].default.IntParam) {
-            default_values[i] = parameters[i].default.IntParam;
-        } else if (parameters[i].default.FloatParam) {
-            default_values[i] = parameters[i].default.FloatParam;
-        } else if (parameters[i].default.StringParam) {
-            default_values[i] = parameters[i].default.StringParam;
-        } else {
-            default_values[i] = parameters[i].default.BoolParam;
+    for (let module of modules) {
+        for (let i = 0; i < module.parameters.length; i++) {
+            if (module.parameters[i].default.IntParam) {
+                default_values[i] = module.parameters[i].default.IntParam;
+            } else if (module.parameters[i].default.FloatParam) {
+                default_values[i] = module.parameters[i].default.FloatParam;
+            } else if (module.parameters[i].default.StringParam) {
+                default_values[i] = module.parameters[i].default.StringParam;
+            } else {
+                default_values[i] = module.parameters[i].default.BoolParam;
+            }
         }
     }
 
@@ -72,9 +74,25 @@ function Parameters(parameters, id, onSTLChange) {
     return (
         <form onSubmit={handleSubmit}>
             <CardContent>
-                {parameters.map((parameter, index) => (
-                    RenderParam(parameter, index, formValues, setFormValues)
-                ))}
+                {modules.map((module) => {
+                    let rendered_name = false;
+                    return (
+                        module.parameters.map((parameter, index) => {
+                            if (rendered_name) {
+                                return (
+                                    RenderParam(parameter, index, formValues, setFormValues)
+                                );
+                            } else {
+                                rendered_name = true;
+                                return (
+                                    <>
+                                        <Typography variant="h6" className="Module-title"><b>{module.name}</b></Typography>
+                                    </>
+                                );
+                            }
+                        })
+                    );
+                })}
             </CardContent>
             <CardActions>
                 <Button
@@ -121,7 +139,7 @@ function ModelView() {
                         <Typography>{model.description}</Typography>
                     </Paper>
                     <Paper elevation={1} className="Parameter-paper" style={{height: "70%"}}>
-                        {Parameters(model.parameters, model.id, onSTLChange)}
+                        {ParamView(model.modules, model.id, onSTLChange)}
                     </Paper>
                 </Grid>
                 <Grid item xs={6.5}>

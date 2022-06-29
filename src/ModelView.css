@@ -20,6 +20,11 @@
     margin: 8px;
 }
 
+.Module-title {
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+
 .Controls-box {
     padding-top: 5px;
 }

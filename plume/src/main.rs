@@ -5,9 +5,6 @@
 //  * index         -> Traverses and indexes the models in the models directory
 //  * dist          -> Distributes the indexed files to their relevant directories
 
-// TODO: Implement a distribution function that copies the files to their required directories
-// TODO: Make some kind of git hook system that checks commits to the models directory
-
 mod config;
 mod parse;
 
@@ -87,7 +84,7 @@ struct Model {
     date: NaiveDate,
     description: String,
     author: String,
-    parameters: Vec<parse::Parameter>,
+    modules: Vec<parse::Module>,
     image_path: PathBuf,
     scad_path: PathBuf,
 }
@@ -111,9 +108,9 @@ fn index(path: &PathBuf) -> Result<(), Box<dyn Error>> {
         let info_string = fs::read_to_string(&entry.2)?;
         let info_json: Value = serde_json::from_str(&info_string)?;
 
-        let parameters = parse::parse_parameters(
-            &info_json["parameters"].as_array().unwrap(),
-            info_json["name"].to_string(),
+        let modules = parse::parse_modules(
+            &info_json["modules"].as_array().unwrap(),
+            info_json["name"].as_str().unwrap().to_string(),
             &entry.1
         )?;
 
@@ -123,7 +120,7 @@ fn index(path: &PathBuf) -> Result<(), Box<dyn Error>> {
             date: NaiveDate::parse_from_str(&info_json["date"].as_str().unwrap().to_string(), "%Y-%m-%d")?,
             description: info_json["description"].as_str().unwrap().to_string(),
             author: info_json["author"].as_str().unwrap().to_string(),
-            parameters,
+            modules,
             image_path: entry.0,
             scad_path: entry.1,
         });
@@ -182,7 +179,7 @@ fn distribute(
             date: model.date,
             description: model.description,
             author: model.author,
-            parameters: model.parameters,
+            modules: model.modules,
             image_path: PathBuf::from(format!("images/{}.jpg", &model.id)),
             scad_path: PathBuf::from(format!("scad/{}.scad", &model.id)),
             id: model.id,

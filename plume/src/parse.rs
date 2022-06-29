@@ -36,6 +36,26 @@ pub fn parse_models_dir(
     }
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Module {
+    pub name: String,
+    pub parameters: Vec<Parameter>
+}
+
+// Parse the json modules and the parameters that they contain ensuring existence and restrictions
+pub fn parse_modules(modules: &Vec<Value>, model_name: String, scad_path: &PathBuf) -> Result<Vec<Module>, Box<dyn Error>> {
+    let mut parsed_modules: Vec<Module> = Vec::new();
+    for module in modules {
+        println!("{:?}", module);
+        parsed_modules.push(Module {
+            name: module["name"].as_str().unwrap().to_string(),
+            parameters: parse_parameters(&module["parameters"].as_array().unwrap(), &model_name, scad_path)?
+        });
+    }
+    Ok(parsed_modules)
+}
+
+
 // Representations of valid parameters
 #[derive(Serialize, Deserialize, Debug)]
 pub enum ParamType {
@@ -119,7 +139,7 @@ impl Error for RestrictionError {}
 // TODO: Check for parameter fields that are not within the spec - these should raise an error
 pub fn parse_parameters(
     parameters: &Vec<Value>,
-    model_name: String,
+    model_name: &String,
     scad_path: &PathBuf,
 ) -> Result<Vec<Parameter>, Box<dyn Error>> {
     let mut parsed_parameters: Vec<Parameter> = Vec::new();
@@ -281,7 +301,7 @@ pub fn parse_parameters(
                         default: ParamType::StringParam(
                             parameter["default"].as_str().unwrap().to_string(),
                         ),
-                        restriction: ParamRestriction::StringLengthRestriction(parameter["maximum"].as_i64().unwrap())
+                        restriction: ParamRestriction::StringLengthRestriction(parameter["maximum"].as_i64().unwrap()),
                     });
                 } else {
                     Err(RestrictionError::InvalidRange(
