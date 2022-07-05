@@ -100,7 +100,7 @@ fn generate_id(i: i32) -> String {
 
 // Create an `index.json` file in the models directory linking to the relevant information
 fn index(path: &PathBuf) -> Result<(), Box<dyn Error>> {
-    let flattened_models = parse::parse_models_dir(path, false)?;
+    let flattened_models = parse::traverse_models_dir(path, false)?;
     let mut models: Vec<Model> = Vec::new();
     let mut counter: i32 = 0;
 
