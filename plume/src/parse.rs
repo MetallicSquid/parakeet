@@ -4,8 +4,6 @@ use std::error::Error;
 use std::path::PathBuf;
 use std::{fmt, fs};
 use std::io::Read;
-use std::collections::HashMap;
-use std::str::Chars;
 
 // Traverse the provided models directory and extract the relevant files
 pub fn traverse_models_dir(
@@ -60,6 +58,7 @@ pub enum ParamRestriction {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Parameter {
+    pub id: i64,
     pub name: String,
     pub default: ParamType,
     pub restriction: ParamRestriction,
@@ -122,9 +121,9 @@ impl Error for RestrictionError {}
 pub fn parse_parameters(
     parameters: &Vec<Value>,
     model_name: &String,
-    scad_path: &PathBuf,
 ) -> Result<Vec<Parameter>, Box<dyn Error>> {
     let mut parsed_parameters: Vec<Parameter> = Vec::new();
+    let mut id_count: i64 = 0;
     for parameter in parameters {
         if parameter["default"].is_boolean() {
             // Bool parameter
@@ -134,6 +133,7 @@ pub fn parse_parameters(
                 && parameter["maximum"].is_null()
             {
                 parsed_parameters.push(Parameter {
+                    id: id_count,
                     name: parameter["name"].as_str().unwrap().to_string(),
                     default: ParamType::BoolParam(parameter["default"].as_bool().unwrap()),
                     restriction: ParamRestriction::NoRestriction,
@@ -153,6 +153,7 @@ pub fn parse_parameters(
                 // Range restricted
                 if parameter["lower"].as_i64() < parameter["upper"].as_i64() {
                     parsed_parameters.push(Parameter {
+                        id: id_count,
                         name: parameter["name"].as_str().unwrap().to_string(),
                         default: ParamType::IntParam(parameter["default"].as_i64().unwrap()),
                         restriction: ParamRestriction::IntRangeRestriction {
@@ -163,6 +164,7 @@ pub fn parse_parameters(
                 } else if parameter["lower"].as_i64() > parameter["upper"].as_i64() {
                     println!("Warning: 'lower' and 'upper' fields for the '{}' parameter in the '{}' model have been swapped", parameter["name"], model_name);
                     parsed_parameters.push(Parameter {
+                        id: id_count,
                         name: parameter["name"].as_str().unwrap().to_string(),
                         default: ParamType::IntParam(parameter["default"].as_i64().unwrap()),
                         restriction: ParamRestriction::IntRangeRestriction {
@@ -197,6 +199,7 @@ pub fn parse_parameters(
                     }
                 }
                 parsed_parameters.push(Parameter {
+                    id: id_count,
                     name: parameter["name"].as_str().unwrap().to_string(),
                     default: ParamType::IntParam(parameter["default"].as_i64().unwrap()),
                     restriction: ParamRestriction::IntListRestriction(allowed),
@@ -216,6 +219,7 @@ pub fn parse_parameters(
                 // Range restricted
                 if parameter["lower"].as_f64() < parameter["upper"].as_f64() {
                     parsed_parameters.push(Parameter {
+                        id: id_count,
                         name: parameter["name"].as_str().unwrap().to_string(),
                         default: ParamType::FloatParam(parameter["default"].as_f64().unwrap()),
                         restriction: ParamRestriction::FloatRangeRestriction {
@@ -226,6 +230,7 @@ pub fn parse_parameters(
                 } else if parameter["lower"].as_f64() > parameter["upper"].as_f64() {
                     println!("Warning: 'lower' and 'upper' fields for the '{}' parameter in the '{}' model have been swapped", parameter["name"], model_name);
                     parsed_parameters.push(Parameter {
+                        id: id_count,
                         name: parameter["name"].as_str().unwrap().to_string(),
                         default: ParamType::FloatParam(parameter["default"].as_f64().unwrap()),
                         restriction: ParamRestriction::FloatRangeRestriction {
@@ -260,6 +265,7 @@ pub fn parse_parameters(
                     }
                 }
                 parsed_parameters.push(Parameter {
+                    id: id_count,
                     name: parameter["name"].as_str().unwrap().to_string(),
                     default: ParamType::FloatParam(parameter["default"].as_f64().unwrap()),
                     restriction: ParamRestriction::FloatListRestriction(allowed),
@@ -279,6 +285,7 @@ pub fn parse_parameters(
                 // Range restricted
                 if parameter["maximum"].as_i64().unwrap() > 0 {
                     parsed_parameters.push(Parameter {
+                        id: id_count,
                         name: parameter["name"].as_str().unwrap().to_string(),
                         default: ParamType::StringParam(
                             parameter["default"].as_str().unwrap().to_string(),
@@ -312,6 +319,7 @@ pub fn parse_parameters(
                     }
                 }
                 parsed_parameters.push(Parameter {
+                    id: id_count,
                     name: parameter["name"].as_str().unwrap().to_string(),
                     default: ParamType::StringParam(
                         parameter["default"].as_str().unwrap().to_string(),
@@ -326,6 +334,7 @@ pub fn parse_parameters(
         } else {
             Err(TypeError(parameter["name"].as_str().unwrap().to_string()))?;
         }
+        id_count += 1;
     }
 
     Ok(parsed_parameters)
@@ -334,6 +343,7 @@ pub fn parse_parameters(
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Module {
+    pub id: i64,
     pub name: String,
     pub parameters: Vec<Parameter>
 }
@@ -363,10 +373,12 @@ impl Error for ModuleError {}
 // FIXME: The representation of parts only as modules is flawed, change this
 pub fn parse_modules(modules: &Vec<Value>, model_name: String, scad_path: &PathBuf) -> Result<Vec<Module>, Box<dyn Error>> {
     let mut parsed_modules: Vec<Module> = Vec::new();
+    let mut id_count: i64 = 0;
     for module in modules {
         parsed_modules.push(Module {
+            id: id_count,
             name: module["name"].as_str().unwrap().to_string(),
-            parameters: parse_parameters(&module["parameters"].as_array().unwrap(), &model_name, scad_path)?
+            parameters: parse_parameters(&module["parameters"].as_array().unwrap(), &model_name)?
         });
     }
 

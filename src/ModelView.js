@@ -37,7 +37,7 @@ function GatherModelInfo() {
     return {}
 }
 
-function ParamView(modules, id, onSTLChange) {
+function ParamView(modules, model_id, onSTLChange) {
     const default_values = {};
 
     for (let module of modules) {
@@ -59,14 +59,14 @@ function ParamView(modules, id, onSTLChange) {
     const handleSubmit = (event) => {
         event.preventDefault();
 
-        const url = 'api/generate/' + id;
+        const url = 'api/generate/' + model_id;
         const request = new Request(url, {
             method: 'POST',
             body: JSON.stringify(formValues),
             headers: new Headers({
                 'Content-Type': 'application/json'
             })
-        })
+        });
 
         fetch(request).then(res => onSTLChange(res));
     }
@@ -75,22 +75,15 @@ function ParamView(modules, id, onSTLChange) {
         <form onSubmit={handleSubmit}>
             <CardContent>
                 {modules.map((module) => {
-                    let rendered_name = false;
                     return (
-                        module.parameters.map((parameter, index) => {
-                            if (rendered_name) {
+                        <div>
+                            <Typography variant="h6" className="Module-title"><b>{module.name}</b></Typography>
+                            {module.parameters.map((parameter) => {
                                 return (
-                                    RenderParam(parameter, index, formValues, setFormValues)
+                                    RenderParam(parameter, formValues, setFormValues)
                                 );
-                            } else {
-                                rendered_name = true;
-                                return (
-                                    <>
-                                        <Typography variant="h6" className="Module-title"><b>{module.name}</b></Typography>
-                                    </>
-                                );
-                            }
-                        })
+                            })}
+                        </div>
                     );
                 })}
             </CardContent>
