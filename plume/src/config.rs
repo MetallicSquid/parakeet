@@ -1,47 +1,22 @@
 use serde::{Deserialize, Serialize};
 use std::error::Error;
-use std::fs::{DirEntry, metadata};
+use std::fs::{DirEntry, metadata, canonicalize};
 use std::path::PathBuf;
 use std::env;
 
 #[derive(Serialize, Deserialize)]
-struct PlumeConfig {
+struct PathConfig {
     models_path: PathBuf,
     public_path: PathBuf,
     source_path: PathBuf,
 }
 
-// Make an effort to find reasonable defaults for the needed paths
-impl ::std::default::Default for PlumeConfig {
+impl ::std::default::Default for PathConfig {
     fn default() -> Self {
-        let mut models_path: PathBuf = PathBuf::new();
-        let mut public_path: PathBuf = PathBuf::new();
-        let mut source_path: PathBuf = PathBuf::new();
-
-        let working_dir = env::current_dir().unwrap();
-        let parent_dir = working_dir.parent().unwrap();
-
-        let mut search_closure = |entry_result| -> Result<(), Box<dyn Error>> {
-            let entry: DirEntry = entry_result?;
-            if entry.metadata()?.is_dir() {
-                match entry.file_name().to_str().unwrap() {
-                    "models" => models_path = PathBuf::from(entry.path()),
-                    "public" => public_path = PathBuf::from(entry.path()),
-                    "source" => source_path = PathBuf::from(entry.path()),
-                    _ => {}
-                }
-            }
-
-            Ok(())
-        };
-
-        parent_dir.read_dir().unwrap().map(&mut search_closure);
-        working_dir.read_dir().unwrap().map(&mut search_closure);
-
         Self {
-            models_path,
-            public_path,
-            source_path,
+            models_path: PathBuf::new(),
+            public_path: PathBuf::new(),
+            source_path: PathBuf::new(),
         }
     }
 }
@@ -53,11 +28,11 @@ pub fn config(models_path: PathBuf, public_path: PathBuf, source_path: PathBuf) 
     metadata(&source_path)?;
 
     confy::store(
-        "plume",
-        PlumeConfig {
-            models_path,
-            public_path,
-            source_path,
+        "parakeet",
+        PathConfig {
+            models_path: canonicalize(models_path)?,
+            public_path: canonicalize(public_path)?,
+            source_path: canonicalize(source_path)?,
         },
     )?;
 
@@ -66,7 +41,7 @@ pub fn config(models_path: PathBuf, public_path: PathBuf, source_path: PathBuf) 
 
 // Loads the 'models', 'public' and 'source' paths from the config
 pub fn get_paths() -> Result<Vec<PathBuf>, Box<dyn Error>> {
-    let config: PlumeConfig = confy::load("plume")?;
+    let config: PathConfig = confy::load("parakeet")?;
 
     Ok(vec![config.models_path, config.public_path, config.source_path])
 }
