@@ -9,9 +9,9 @@ import {AxesHelper} from "three";
 extend({ OrbitControls });
 
 export function RenderSTL(stl) {
-    console.log("render")
     const geometry = useLoader(STLLoader, stl.stl);
     const ref = useRef();
+
     const { camera } = useThree();
     useEffect(() => {
         camera.lookAt(ref.current.position);
@@ -33,7 +33,11 @@ export function CameraControls(autoRotate) {
     const { camera, gl: { domElement} } = useThree();
     const controls = useRef();
     useFrame((state) => controls.current.update());
-    return <orbitControls ref={controls} args={[camera, domElement]} autoRotate={autoRotate.autoRotate}/>;
+    return <orbitControls
+        ref={controls}
+        args={[camera, domElement]}
+        autoRotate={autoRotate.autoRotate}
+    />;
 }
 
 export function Axes(axes) {

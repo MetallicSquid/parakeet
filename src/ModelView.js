@@ -53,7 +53,6 @@ function ParamView(modules, model_id, formValues, setFormValues, onStlChange) {
 }
 
 function genStl(id, formValues, setStl) {
-    console.log("generate");
     const url = '/api/generate/' + id;
     const request = new Request(url, {
         method: 'POST',
@@ -126,12 +125,12 @@ function ModelView(props) {
                 </Grid>
                 <Grid item xs={6.5}>
                     <Paper elevation={1} className="Parameter-paper" style={{height: "70%"}}>
-                        <Canvas camera={{position: [0, 10, 20]}} style={{height: "90%"}}>
+                        <Canvas camera={{position: [0, 10, 20], up: [0, 0, 1]}} style={{height: "90%"}}>
                             <Suspense fallback={null}>
-                                <RenderSTL stl={stl} />
+                                <RenderSTL stl={stl}/>
                             </Suspense>
-                            <Axes axes={axes} />
                             <CameraControls autoRotate={autoRotate} />
+                            <Axes axes={axes} />
                         </Canvas>
                         <Box className="Controls-box">
                             <Stack
