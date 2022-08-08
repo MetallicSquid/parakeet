@@ -8,18 +8,16 @@ use serde_json::Value;
 use rocket::serde::{Serialize, Deserialize, json::Json};
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct PathConfig {
+pub struct ParakeetConfig {
     pub models_path: PathBuf,
-    pub public_path: PathBuf,
-    pub source_path: PathBuf,
+    pub build_path: PathBuf,
 }
 
-impl ::std::default::Default for PathConfig {
+impl ::std::default::Default for ParakeetConfig {
     fn default() -> Self {
         Self {
             models_path: PathBuf::new(),
-            public_path: PathBuf::new(),
-            source_path: PathBuf::new(),
+            build_path: PathBuf::new(),
         }
     }
 }
@@ -57,7 +55,7 @@ pub struct Parameter {
 
 pub struct STLModel {
     pub id: String,
-    pub config: PathConfig,
+    pub config: ParakeetConfig,
     pub parameters: Vec<Parameter>,
     pub command_string: String,
     pub usages: i64
@@ -101,14 +99,14 @@ impl STLModel {
         parameter_string = parameter_string[0..&parameter_string.len() - 2].to_string();
 
         let module_scad: String = format!("{}({});", module_name, parameter_string);
-        let full_scad_path: PathBuf = Path::join(&self.config.public_path, &scad_path);
+        let full_scad_path: PathBuf = Path::join(&self.config.build_path, &scad_path);
 
         self.command_string = format!("use <{}>;{}", full_scad_path.to_str().unwrap(), module_scad);
     }
 
     pub fn create_stl(&self) -> Result<(), Box<dyn Error>> {
         if !self.does_stl_exist()? {
-            let stl_path: PathBuf = Path::join(&self.config.public_path, &self.get_identifier());
+            let stl_path: PathBuf = Path::join(&self.config.build_path, &self.get_identifier());
 
             let command: Output = Command::new("sh")
                 .arg("-c")
@@ -162,7 +160,7 @@ impl STLModel {
             Err(ModelError::NotConfigured(self.id.to_string()))?
         }
 
-        let stl_path: PathBuf = Path::join(&self.config.public_path, &self.get_identifier());
+        let stl_path: PathBuf = Path::join(&self.config.build_path, &self.get_identifier());
 
         if stl_path.exists() {
             return Ok(true)

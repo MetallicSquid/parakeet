@@ -28,10 +28,8 @@ enum Commands {
     Config {
         /// Models directory path
         models_path: PathBuf,
-        /// Public directory path
-        public_path: PathBuf,
-        /// Source directory path
-        source_path: PathBuf,
+        /// Build directory path
+        build_path: PathBuf,
     },
     /// Index the models directory and output an 'index.json' file
     #[structopt(name = "index")]
@@ -44,15 +42,13 @@ enum Commands {
 fn main() {
     let paths = config::get_paths().expect("Could not read config information.");
     let config_models_path = &paths[0];
-    let config_public_path = &paths[1];
-    let config_src_path = &paths[2];
+    let config_build_path= &paths[1];
 
     match Commands::from_args() {
         Commands::Config {
             models_path,
-            public_path,
-            source_path,
-        } => match config::config(models_path, public_path, source_path) {
+            build_path,
+        } => match config::config(models_path, build_path) {
             Ok(_) => println!("Successfully configured plume. Plume is now ready to use."),
             Err(error) => println!("Failed to configure plume: [{}]", error),
         },
@@ -67,7 +63,7 @@ fn main() {
             }
         }
         Commands::Dist {} => {
-            match distribute(config_models_path, config_public_path, config_src_path) {
+            match distribute(config_models_path, config_build_path) {
                 Ok(_) => {
                     println!("Successfully distributed the files. Parakeet is now ready to use.")
                 }
@@ -137,13 +133,12 @@ fn index(path: &PathBuf) -> Result<(), Box<dyn Error>> {
 // TODO: Add support for non .jpg images
 fn distribute(
     models_path: &PathBuf,
-    public_path: &PathBuf,
-    src_path: &PathBuf,
+    build_path: &PathBuf,
 ) -> Result<(), Box<dyn Error>> {
     let index_string: String = fs::read_to_string(PathBuf::from(models_path).join("index.json"))?;
     let index_json: Vec<Model> = serde_json::from_str(&index_string)?;
 
-    let scad_path = public_path.join(format!("scad/"));
+    let scad_path = build_path.join("scad/");
     if !scad_path.exists() {
         fs::create_dir(&scad_path)?;
     }
@@ -152,7 +147,7 @@ fn distribute(
         fs::remove_file(entry_path)?;
     }
 
-    let images_path = public_path.join(format!("images/"));
+    let images_path = build_path.join("images/");
     if !images_path.exists() {
         fs::create_dir(&images_path)?;
     }
@@ -161,17 +156,22 @@ fn distribute(
         fs::remove_file(entry_path)?;
     }
 
+    let stls_path = build_path.join("stls/");
+    if !stls_path.exists() {
+        fs::create_dir(&stls_path)?;
+    }
+
     let mut dist_index: Vec<Model> = Vec::new();
     for model in index_json {
         fs::metadata(&model.scad_path)?;
         fs::copy(
             &model.scad_path,
-            public_path.join(format!("scad/{}.scad", &model.id)),
+            build_path.join(format!("scad/{}.scad", &model.id)),
         )?;
         fs::metadata(&model.image_path)?;
         fs::copy(
             &model.image_path,
-            public_path.join(format!("images/{}.jpg", &model.id)),
+            build_path.join(format!("images/{}.jpg", &model.id)),
         )?;
 
         dist_index.push(Model {
@@ -186,7 +186,7 @@ fn distribute(
         });
     }
 
-    let mut index_file = fs::File::create(src_path.join("index.json")).unwrap();
+    let mut index_file = fs::File::create(build_path.join("index.json")).unwrap();
     writeln!(index_file, "{}", &serde_json::to_string(&dist_index)?)?;
 
     Ok(())

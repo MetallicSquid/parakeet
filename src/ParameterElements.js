@@ -11,7 +11,7 @@ import {
 } from "@mui/material";
 
 // A slider, input combination that represents the IntRangeRestriction
-export function IntRange(parameter, formValues, setFormValues) {
+export function IntRange(parameter, formValues, setFormValues, onStlChange) {
     const name = parameter.name;
     const default_value = parameter.default.IntParam;
     const minimum = parameter.restriction.IntRangeRestriction.lower;
@@ -32,6 +32,7 @@ export function IntRange(parameter, formValues, setFormValues) {
             ...formValues,
             [index]: (event.target.value === "" ? "" : Number(event.target.value))
         });
+        onStlChange();
     };
 
     const handleBlur = () => {
@@ -74,6 +75,7 @@ export function IntRange(parameter, formValues, setFormValues) {
                     min={minimum}
                     max={maximum}
                     onChange={handleSliderChange}
+                    onChangeCommitted={onStlChange}
                     aria-labelledby={"int-range-slider"}
                 />
             </Grid>
@@ -100,7 +102,7 @@ export function IntRange(parameter, formValues, setFormValues) {
 }
 
 // A slider, input combination that represents the FloatRangeRestriction
-export function FloatRange(parameter, formValues, setFormValues) {
+export function FloatRange(parameter, formValues, setFormValues, onStlChange) {
     const name = parameter.name;
     const default_value = parameter.default.FloatParam;
     const minimum = parameter.restriction.FloatRangeRestriction.lower;
@@ -121,6 +123,7 @@ export function FloatRange(parameter, formValues, setFormValues) {
             ...formValues,
             [index]: (event.target.value === "" ? "" : Number(event.target.value))
         });
+        onStlChange();
     };
 
     const handleBlur = () => {
@@ -158,6 +161,7 @@ export function FloatRange(parameter, formValues, setFormValues) {
                     min={minimum}
                     max={maximum}
                     onChange={handleSliderChange}
+                    onChangeCommitted={onStlChange}
                     aria-labelledby={"float-range-slider"}
                 />
             </Grid>
@@ -183,7 +187,7 @@ export function FloatRange(parameter, formValues, setFormValues) {
 }
 
 // A TextField used to represent the StringLengthRestriction
-export function StringLength(parameter, formValues, setFormValues) {
+export function StringLength(parameter, formValues, setFormValues, onStlChange) {
     const name = parameter.name;
     const maximum = parameter.restriction.StringLengthRestriction;
     const index = parameter.id;
@@ -210,6 +214,7 @@ export function StringLength(parameter, formValues, setFormValues) {
                 <TextField
                     value={value}
                     onChange={handleInputChange}
+                    onChangeCapture={onStlChange}
                     size="small"
                 />
             </Grid>
@@ -218,7 +223,7 @@ export function StringLength(parameter, formValues, setFormValues) {
 }
 
 // A selection that represents a list restriction
-function ListRestriction(name, default_value, allowed, index, formValues, setFormValues) {
+function ListRestriction(name, default_value, allowed, index, formValues, setFormValues, onStlChange) {
     let value = formValues[index];
 
     const handleChange = (event) => {
@@ -226,6 +231,7 @@ function ListRestriction(name, default_value, allowed, index, formValues, setFor
             ...formValues,
             [index]: (event.target.value)
         });
+        onStlChange();
     };
 
     return (
@@ -253,37 +259,37 @@ function ListRestriction(name, default_value, allowed, index, formValues, setFor
 }
 
 // A ListRestriction for integer parameters
-export function IntList(parameter, formValues, setFormValues) {
+export function IntList(parameter, formValues, setFormValues, onStlChange) {
     const name = parameter.name;
     const default_value = parameter.default.IntParam;
     const allowed = parameter.restriction.IntListRestriction;
     const index = parameter.id;
 
-    return (ListRestriction(name, default_value, allowed, index, formValues, setFormValues))
+    return (ListRestriction(name, default_value, allowed, index, formValues, setFormValues, onStlChange))
 }
 
 // A ListRestriction for float parameters
-export function FloatList(parameter, formValues, setFormValues) {
+export function FloatList(parameter, formValues, setFormValues, onStlChange) {
     const name = parameter.name;
     const default_value = parameter.default.FloatParam;
     const allowed = parameter.restriction.FloatListRestriction;
     const index = parameter.id;
 
-    return (ListRestriction(name, default_value, allowed, index, formValues, setFormValues))
+    return (ListRestriction(name, default_value, allowed, index, formValues, setFormValues, onStlChange))
 }
 
 // A ListRestriction for string parameters
-export function StringList(parameter, formValues, setFormValues) {
+export function StringList(parameter, formValues, setFormValues, onStlChange) {
     const name = parameter.name;
     const default_value = parameter.default.StringParam;
     const allowed = parameter.restriction.StringListRestriction;
     const index = parameter.id;
 
-    return (ListRestriction(name, default_value, allowed, index, formValues, setFormValues))
+    return (ListRestriction(name, default_value, allowed, index, formValues, setFormValues, onStlChange))
 }
 
 // A checkbox that represents the BoolRestriction
-export function BoolCheck(parameter, formValues, setFormValues) {
+export function BoolCheck(parameter, formValues, setFormValues, onStlChange) {
     const name = parameter.name;
     const default_value = parameter.default.BoolParam;
     const index = parameter.id;
@@ -293,6 +299,7 @@ export function BoolCheck(parameter, formValues, setFormValues) {
             ...formValues,
             [index]: (event.target.checked)
         });
+        onStlChange();
     };
 
     return (
@@ -312,20 +319,20 @@ export function BoolCheck(parameter, formValues, setFormValues) {
     );
 }
 
-export function RenderParam(parameter, formValues, setFormValues) {
+export function RenderParam(parameter, formValues, setFormValues, onStlChange) {
     if (parameter.restriction.IntRangeRestriction) {
-        return IntRange(parameter, formValues, setFormValues)
+        return IntRange(parameter, formValues, setFormValues, onStlChange)
     } else if (parameter.restriction.IntListRestriction) {
-        return IntList(parameter, formValues, setFormValues)
+        return IntList(parameter, formValues, setFormValues, onStlChange)
     } else if (parameter.restriction.FloatRangeRestriction) {
-        return FloatRange(parameter, formValues, setFormValues)
+        return FloatRange(parameter, formValues, setFormValues, onStlChange)
     } else if (parameter.restriction.FloatListRestriction) {
-        return FloatList(parameter, formValues, setFormValues)
+        return FloatList(parameter, formValues, setFormValues, onStlChange)
     } else if (parameter.restriction.StringLengthRestriction) {
-        return StringLength(parameter, formValues, setFormValues)
+        return StringLength(parameter, formValues, setFormValues, onStlChange)
     } else if (parameter.restriction.StringListRestriction) {
-        return StringList(parameter, formValues, setFormValues)
+        return StringList(parameter, formValues, setFormValues, onStlChange)
     } else if (parameter.restriction.NoRestriction) {
-        return BoolCheck(parameter, formValues, setFormValues)
+        return BoolCheck(parameter, formValues, setFormValues, onStlChange)
     }
 }

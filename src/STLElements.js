@@ -9,6 +9,7 @@ import {AxesHelper} from "three";
 extend({ OrbitControls });
 
 export function RenderSTL(stl) {
+    console.log("render")
     const geometry = useLoader(STLLoader, stl.stl);
     const ref = useRef();
     const { camera } = useThree();

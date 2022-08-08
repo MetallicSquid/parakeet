@@ -9,13 +9,25 @@ use serde_json::Value;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
+use rocket::Request;
 
-#[post("/generate/<id>", data = "<params>")]
+#[get("/models")]
+fn get_index() -> Json<Value> {
+    let config: manager::ParakeetConfig = confy::load("parakeet").expect("Could not load config file");
+
+    let index_path: PathBuf = Path::join(&config.build_path, "index.json");
+    let index_file: String = fs::read_to_string(index_path).expect("Could not open index file");
+    let index_json: Value = serde_json::from_str(&index_file).expect("Could not read index file");
+
+    return Json::from(index_json)
+}
+
 // TODO: Support multiple modules
-fn generate(id: &str, params: Json<Value>) -> Json<String> {
-    let config: manager::PathConfig = confy::load("parakeet").expect("Could not load config file");
+#[post("/generate/<id>", data = "<params>")]
+fn generate_model(id: &str, params: Json<Value>) -> String {
+    let config: manager::ParakeetConfig = confy::load("parakeet").expect("Could not load config file");
 
-    let index_path: PathBuf = Path::join(&config.source_path, "index.json");
+    let index_path: PathBuf = Path::join(&config.build_path, "index.json");
     let index_file: String = fs::read_to_string(index_path).expect("Could not open index file");
     let index_json: Value = serde_json::from_str(&index_file).expect("Could not read index file");
 
@@ -34,12 +46,18 @@ fn generate(id: &str, params: Json<Value>) -> Json<String> {
     model.gen_command_string(module_name.to_string(), scad_path.to_string());
     model.create_stl().expect("Could not generate the .stl file");
 
-    Json(model.get_identifier())
+    model.get_identifier()
 }
+
+#[get["/<id>"]]
+fn pass(id: &str) {}
 
 #[launch]
 fn rocket() -> _ {
+    let config: manager::ParakeetConfig = confy::load("parakeet").expect("Could not load config file");
+
     rocket::build()
-        .mount("/", FileServer::from("../build"))
-        .mount("/api", routes![generate])
+        .mount("/", routes![pass])
+        .mount("/", FileServer::from(config.build_path))
+        .mount("/api", routes![generate_model, get_index])
 }

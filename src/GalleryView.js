@@ -1,5 +1,4 @@
 import './GalleryView.css';
-import models from '../src/index.json'
 
 import React from 'react';
 import {
@@ -36,33 +35,31 @@ function ModelCard(props) {
     );
 }
 
-class Gallery extends React.Component {
-    render() {
-        return (
-            <>
-                <div className="Gallery-div">
-                    <Grid
-                        container
-                        spacing={{ xs: 2, md: 3 }}
-                        columns={{ xs: 4, sm: 8, md: 12 }}
-                        justifyContent="center"
-                    >
-                        {models.map(model => (
-                            <Grid item>
-                                <ModelCard
-                                    id={model.id}
-                                    name={model.name}
-                                    date={model.date}
-                                    image_path={model.image_path}
-                                    description={model.description}
-                                />
-                            </Grid>
-                        ))}
-                    </Grid>
-                </div>
-            </>
-       );
-    }
+function Gallery(props) {
+    return (
+        <>
+            <div className="Gallery-div">
+                <Grid
+                    container
+                    spacing={{ xs: 2, md: 3 }}
+                    columns={{ xs: 4, sm: 8, md: 12 }}
+                    justifyContent="center"
+                >
+                    {props.models.map(model => (
+                        <Grid item>
+                            <ModelCard
+                                id={model.id}
+                                name={model.name}
+                                date={model.date}
+                                image_path={model.image_path}
+                                description={model.description}
+                            />
+                        </Grid>
+                    ))}
+                </Grid>
+            </div>
+        </>
+   );
 }
 
 class GalleryView extends React.Component {
@@ -77,7 +74,7 @@ class GalleryView extends React.Component {
                 <div className="Title-div">
                     <h1 className="Title-heading">🦜 Guillaume's Parakeet 🦜</h1>
                 </div>
-                <Gallery />
+                <Gallery models={this.props.models}/>
             </div>
         );
     }

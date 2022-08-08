@@ -1,8 +1,4 @@
 import './ModelView.css';
-import models from '../src/index.json'
-
-// FIXME: For now, this just points to a static `stl_test.stl` file
-import stl_file from './stl_test.stl'
 
 import { useParams } from 'react-router-dom';
 import { RenderParam } from './ParameterElements';
@@ -27,7 +23,7 @@ import {
 } from "@mui/material";
 import {Canvas} from "@react-three/fiber";
 
-function GatherModelInfo() {
+function GatherModelInfo(models) {
     const { id } = useParams();
     for (let i = 0; i < models.length; i++) {
         if (models[i].id === id) {
@@ -37,10 +33,48 @@ function GatherModelInfo() {
     return {}
 }
 
-function ParamView(modules, model_id, onSTLChange) {
-    const default_values = {};
+function ParamView(modules, model_id, formValues, setFormValues, onStlChange) {
+    return (
+        <CardContent>
+            {modules.map((module) => {
+                return (
+                    <div>
+                        <Typography variant="h6" className="Module-title"><b>{module.name}</b></Typography>
+                        {module.parameters.map((parameter) => {
+                            return (
+                                RenderParam(parameter, formValues, setFormValues, onStlChange)
+                            );
+                        })}
+                    </div>
+                );
+            })}
+        </CardContent>
+    )
+}
 
-    for (let module of modules) {
+function genStl(id, formValues, setStl) {
+    console.log("generate");
+    const url = '/api/generate/' + id;
+    const request = new Request(url, {
+        method: 'POST',
+        body: JSON.stringify(formValues),
+        headers: new Headers({
+            'Content-Type': 'application/json'
+        })
+    });
+
+    fetch(request)
+        .then(resp => resp.text())
+        .then(text => {
+            setStl(text);
+        });
+}
+
+function ModelView(props) {
+    const model = GatherModelInfo(props.models);
+
+    let default_values = {};
+    for (let module of model.modules) {
         for (let i = 0; i < module.parameters.length; i++) {
             if (module.parameters[i].default.IntParam) {
                 default_values[i] = module.parameters[i].default.IntParam;
@@ -55,61 +89,16 @@ function ParamView(modules, model_id, onSTLChange) {
     }
 
     const [formValues, setFormValues] = useState(default_values);
-
-    const handleSubmit = (event) => {
-        event.preventDefault();
-
-        const url = 'api/generate/' + model_id;
-        const request = new Request(url, {
-            method: 'POST',
-            body: JSON.stringify(formValues),
-            headers: new Headers({
-                'Content-Type': 'application/json'
-            })
-        });
-
-        fetch(request).then(res => onSTLChange(res));
-    }
-
-    return (
-        <form onSubmit={handleSubmit}>
-            <CardContent>
-                {modules.map((module) => {
-                    return (
-                        <div>
-                            <Typography variant="h6" className="Module-title"><b>{module.name}</b></Typography>
-                            {module.parameters.map((parameter) => {
-                                return (
-                                    RenderParam(parameter, formValues, setFormValues)
-                                );
-                            })}
-                        </div>
-                    );
-                })}
-            </CardContent>
-            <CardActions>
-                <Button
-                    className="Submit-button"
-                    variant="outlined"
-                    type="submit"
-                    fullWidth
-                >
-                    Submit
-                </Button>
-            </CardActions>
-        </form>
-    )
-}
-
-function ModelView() {
-    const model = GatherModelInfo();
-
-    const [stl, setStl] = useState(stl_file);
+    const [stl, setStl] = useState("");
     const [autoRotate, setAutoRotate] = useState(true);
     const [axes, setAxes] = useState(true);
 
-    const onSTLChange = (new_stl) => {
-        setStl(new_stl);
+    if (stl === "") {
+        genStl(model.id, formValues, setStl);
+    }
+
+    const onStlChange = (event) => {
+        genStl(model.id, formValues, setStl);
     }
 
     const onAutoRotateChange = (event) => {
@@ -132,7 +121,7 @@ function ModelView() {
                         <Typography>{model.description}</Typography>
                     </Paper>
                     <Paper elevation={1} className="Parameter-paper" style={{height: "70%"}}>
-                        {ParamView(model.modules, model.id, onSTLChange)}
+                        {ParamView(model.modules, model.id, formValues, setFormValues, onStlChange)}
                     </Paper>
                 </Grid>
                 <Grid item xs={6.5}>
