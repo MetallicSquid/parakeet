@@ -15,8 +15,6 @@ import {
     Grid,
     Paper,
     Typography,
-    Button,
-    CardActions,
     CardContent,
     Box,
     Stack
@@ -109,47 +107,53 @@ function ModelView(props) {
     }
 
     return (
-        <div className="ModelView-div">
+        <div className="Container-div">
             <div className="Model-title-div">
                 <h1 className="Title-heading">{model.name}</h1>
                 <h3 className="Author-subheading">by {model.author}</h3>
             </div>
-            <Grid container spacing={4} justifyContent="center" style={{height: "86vh"}}>
-                <Grid item xs={4.5}>
-                    <Paper elevation={1} className="Parameter-paper" style={{height: "10%"}}>
-                        <Typography>{model.description}</Typography>
-                    </Paper>
-                    <Paper elevation={1} className="Parameter-paper" style={{height: "70%"}}>
-                        {ParamView(model.modules, model.id, formValues, setFormValues, onStlChange)}
-                    </Paper>
+            <Box className="Main-box" pl={4} pr={4}>
+                <Grid
+                    container
+                    direction="row"
+                    justifyContent="center"
+                    alignItems="stretch"
+                    spacing={4}
+                >
+                    <Grid item xs={5}>
+                        <Paper elevation={1} className="Parameter-paper">
+                            <Typography>{model.description}</Typography>
+                            {ParamView(model.modules, model.id, formValues, setFormValues, onStlChange)}
+                        </Paper>
+                    </Grid>
+                    <Grid item xs={7}>
+                        <Paper elevation={1} className="Parameter-paper">
+                            <Canvas camera={{position: [0, 10, 20], up: [0, 0, 1]}} style={{height: "90%"}}>
+                                <Suspense fallback={null}>
+                                    <RenderSTL stl={stl}/>
+                                </Suspense>
+                                <CameraControls autoRotate={autoRotate} />
+                                <Axes axes={axes} />
+                            </Canvas>
+                            <Box className="Controls-box">
+                                <Stack
+                                    direction="row"
+                                    justifyContent="flex-start"
+                                    alignItems="center"
+                                    spacing={4}
+                                >
+                                    <TimeSinceUpdate />
+                                    {CheckAutoRotate(onAutoRotateChange)}
+                                    {CheckAxes(onAxesChange)}
+                                </Stack>
+                            </Box>
+                        </Paper>
+                    </Grid>
                 </Grid>
-                <Grid item xs={6.5}>
-                    <Paper elevation={1} className="Parameter-paper" style={{height: "70%"}}>
-                        <Canvas camera={{position: [0, 10, 20], up: [0, 0, 1]}} style={{height: "90%"}}>
-                            <Suspense fallback={null}>
-                                <RenderSTL stl={stl}/>
-                            </Suspense>
-                            <CameraControls autoRotate={autoRotate} />
-                            <Axes axes={axes} />
-                        </Canvas>
-                        <Box className="Controls-box">
-                            <Stack
-                                direction="row"
-                                justifyContent="flex-start"
-                                alignItems="center"
-                                spacing={4}
-                            >
-                                <TimeSinceUpdate />
-                                {CheckAutoRotate(onAutoRotateChange)}
-                                {CheckAxes(onAxesChange)}
-                            </Stack>
-                        </Box>
-                    </Paper>
-                    <Paper elevation={1} className="Parameter-paper" style={{height: "10%"}}>
-
-                    </Paper>
-                </Grid>
-            </Grid>
+            </Box>
+            <div className="Model-footer-div">
+                <h1>This will contain useful information at some point.</h1>
+            </div>
         </div>
     )
 }

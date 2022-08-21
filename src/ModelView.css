@@ -1,6 +1,15 @@
+.Container-div {
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    height: 100vh;
+}
+
 .Model-title-div {
     text-align: center;
     font-size: x-large;
+    flex-grow: 1;
 }
 
 .Model-title-div h1 {
@@ -11,9 +20,15 @@
     margin-top: 0;
 }
 
+.Main-box {
+    display: flex;
+    align-items: stretch;
+    align-content: stretch;
+    flex-grow: 2;
+}
+
 .Parameter-paper {
-    padding: 15px;
-    margin: 15px;
+    height: 100%;
 }
 
 .Parameter-grid {
@@ -27,4 +42,10 @@
 
 .Controls-box {
     padding-top: 5px;
+}
+
+.Model-footer-div {
+    text-align: center;
+    font-size: x-large;
+    flex-grow: 1;
 }
