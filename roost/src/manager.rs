@@ -1,9 +1,10 @@
 // TODO: Implement file deletion algorithm (based on usage and time alive)
 
 use std::error::Error;
-use std::fmt;
+use std::{fmt, fs};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
+use fs::read_to_string;
 use serde_json::Value;
 use rocket::serde::{Serialize, Deserialize, json::Json};
 
@@ -166,5 +167,36 @@ impl STLModel {
             return Ok(true)
         }
         Ok(false)
+    }
+
+    pub fn get_dimensions(&self) -> Result<(f64, f64, f64), Box<dyn Error>> {
+        if self.does_stl_exist()? {
+            let stl_path: PathBuf = Path::join(&self.config.build_path, &self.get_identifier());
+            let stl_contents: String = read_to_string(stl_path)?;
+
+            let mut min_x: f64 = 0.0;
+            let mut min_y: f64 = 0.0;
+            let mut min_z: f64 = 0.0;
+            let mut max_x: f64 = 0.0;
+            let mut max_y: f64 = 0.0;
+            let mut max_z: f64 = 0.0;
+
+            for line in stl_contents.lines() {
+                let split_line: Vec<&str> = line.trim_start().split(" ").collect();
+                if split_line[0] == "vertex" {
+                    let x: f64 = split_line[1].parse::<f64>()?;
+                    let y: f64 = split_line[2].parse::<f64>()?;
+                    let z: f64 = split_line[3].parse::<f64>()?;
+
+                    if x < min_x { min_x = x } else if x > max_x { max_x = x };
+                    if y < min_y { min_y = y } else if y > max_y { max_y = y };
+                    if z < min_z { min_z = z } else if z > max_z { max_z = z };
+                }
+            }
+            return Ok((max_x - min_x, max_y - min_y, max_z - min_z));
+        }
+
+        // FIXME: Arguably, this should throw an error
+        Ok((0.0, 0.0, 0.0))
     }
 }

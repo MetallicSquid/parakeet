@@ -8,16 +8,17 @@ import {
     Axes,
     TimeSinceUpdate,
     CheckAutoRotate,
-    CheckAxes
+    CheckAxes, ResetCamera
 } from "./STLElements";
 import React, {Suspense, useState} from 'react';
 import {
     Grid,
+    Stack,
     Paper,
+    Container,
     Typography,
-    CardContent,
+    Divider,
     Box,
-    Stack
 } from "@mui/material";
 import {Canvas} from "@react-three/fiber";
 
@@ -31,26 +32,26 @@ function GatherModelInfo(models) {
     return {}
 }
 
-function ParamView(modules, model_id, formValues, setFormValues, onStlChange) {
+function ParamView(props) {
     return (
-        <CardContent>
-            {modules.map((module) => {
+        <>
+            {props.modules.map((module) => {
                 return (
                     <div>
-                        <Typography variant="h6" className="Module-title"><b>{module.name}</b></Typography>
+                        <Typography variant="h6"><b>{module.name}</b></Typography>
                         {module.parameters.map((parameter) => {
                             return (
-                                RenderParam(parameter, formValues, setFormValues, onStlChange)
+                                RenderParam(parameter, props.formValues, props.setFormValues, props.onStlChange)
                             );
                         })}
                     </div>
                 );
             })}
-        </CardContent>
+        </>
     )
 }
 
-function genStl(id, formValues, setStl) {
+function genStl(id, formValues, setStl, setDimensions) {
     const url = '/api/generate/' + id;
     const request = new Request(url, {
         method: 'POST',
@@ -61,9 +62,10 @@ function genStl(id, formValues, setStl) {
     });
 
     fetch(request)
-        .then(resp => resp.text())
-        .then(text => {
-            setStl(text);
+        .then(resp => resp.json())
+        .then(json => {
+            setStl(json["filename"]);
+            setDimensions(json["dimensions"])
         });
 }
 
@@ -87,15 +89,18 @@ function ModelView(props) {
 
     const [formValues, setFormValues] = useState(default_values);
     const [stl, setStl] = useState("");
+    const [dimensions, setDimensions] = useState([50.0, 50.0, 50.0])
+
     const [autoRotate, setAutoRotate] = useState(true);
     const [axes, setAxes] = useState(true);
+    const [cameraReset, setCameraReset] = useState(true);
 
     if (stl === "") {
-        genStl(model.id, formValues, setStl);
+        genStl(model.id, formValues, setStl, setDimensions);
     }
 
     const onStlChange = (event) => {
-        genStl(model.id, formValues, setStl);
+        genStl(model.id, formValues, setStl, setDimensions);
     }
 
     const onAutoRotateChange = (event) => {
@@ -106,55 +111,88 @@ function ModelView(props) {
         setAxes(event.target.checked);
     }
 
+    const onCameraReset = () => {
+        setCameraReset(true);
+    }
+
     return (
-        <div className="Container-div">
-            <div className="Model-title-div">
-                <h1 className="Title-heading">{model.name}</h1>
-                <h3 className="Author-subheading">by {model.author}</h3>
-            </div>
-            <Box className="Main-box" pl={4} pr={4}>
+        <Box sx={{flexGrow: 1, height: "100vh"}}>
+            <Grid
+                container
+                direction="row"
+                justifyContent="center"
+                alignItems="stretch"
+                spacing={4}
+                padding={4}
+                height="100%"
+            >
                 <Grid
                     container
-                    direction="row"
-                    justifyContent="center"
+                    item
+                    direction="column"
+                    justifyContent="space-around"
                     alignItems="stretch"
                     spacing={4}
+                    xs={4}
+                    height="100%"
+                    // FIXME: This behaviour isn't ideal honestly, maybe `minSize` is needed
+                    overflow="hidden"
                 >
-                    <Grid item xs={5}>
-                        <Paper elevation={1} className="Parameter-paper">
+                    <Grid item>
+                        <Container>
+                            <Typography fontWeight="bold" variant="h2">{model.name}</Typography>
+                            <Typography variant="h4">by {model.author}</Typography>
+                        </Container>
+                    </Grid>
+
+                    <Grid item>
+                        <Paper elevation={2}>
                             <Typography>{model.description}</Typography>
-                            {ParamView(model.modules, model.id, formValues, setFormValues, onStlChange)}
+                            <Divider />
+                            <ParamView
+                                modules={model.modules}
+                                formValues={formValues}
+                                setFormValues={setFormValues}
+                                onStlChange={onStlChange}
+                            />
                         </Paper>
                     </Grid>
-                    <Grid item xs={7}>
-                        <Paper elevation={1} className="Parameter-paper">
-                            <Canvas camera={{position: [0, 10, 20], up: [0, 0, 1]}} style={{height: "90%"}}>
-                                <Suspense fallback={null}>
-                                    <RenderSTL stl={stl}/>
-                                </Suspense>
-                                <CameraControls autoRotate={autoRotate} />
-                                <Axes axes={axes} />
-                            </Canvas>
-                            <Box className="Controls-box">
-                                <Stack
-                                    direction="row"
-                                    justifyContent="flex-start"
-                                    alignItems="center"
-                                    spacing={4}
-                                >
-                                    <TimeSinceUpdate />
-                                    {CheckAutoRotate(onAutoRotateChange)}
-                                    {CheckAxes(onAxesChange)}
-                                </Stack>
-                            </Box>
+
+                    <Grid item>
+                        <Paper elevation={2}>
+                            <Stack
+                                direction="row"
+                                alignItems="center"
+                                justifyContent="flex-start"
+                                spacing={4}
+                            >
+                                <TimeSinceUpdate />
+                                <CheckAutoRotate onChange={onAutoRotateChange} />
+                                <CheckAxes onChange={onAxesChange} />
+                                <ResetCamera onClick={onCameraReset} />
+                            </Stack>
                         </Paper>
                     </Grid>
                 </Grid>
-            </Box>
-            <div className="Model-footer-div">
-                <h1>This will contain useful information at some point.</h1>
-            </div>
-        </div>
+
+                <Grid item xs overflow="hidden" height="100%">
+                    <Paper elevation={2} sx={{height: "100%"}}>
+                        <Canvas camera={{up: [0, 0, 1]}}>
+                        <Suspense fallback={null}>
+                            <RenderSTL
+                                stl={stl}
+                                dimensions={dimensions}
+                                cameraReset={cameraReset}
+                                setCameraReset={setCameraReset}
+                            />
+                            </Suspense>
+                            <CameraControls autoRotate={autoRotate} />
+                            <Axes axes={axes} size={Math.max(dimensions[0], dimensions[1], dimensions[2])} />
+                        </Canvas>
+                    </Paper>
+                </Grid>
+            </Grid>
+        </Box>
     )
 }
 

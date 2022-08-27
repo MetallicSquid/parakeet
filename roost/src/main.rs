@@ -22,9 +22,15 @@ fn get_index() -> Json<Value> {
     return Json::from(index_json)
 }
 
+#[derive(Serialize)]
+struct GenerateInfo {
+    filename: String,
+    dimensions: (f64, f64, f64)
+}
+
 // TODO: Support multiple modules
 #[post("/generate/<id>", data = "<params>")]
-fn generate_model(id: &str, params: Json<Value>) -> String {
+fn generate_model(id: &str, params: Json<Value>) -> Json<GenerateInfo> {
     let config: manager::ParakeetConfig = confy::load("parakeet").expect("Could not load config file");
 
     let index_path: PathBuf = Path::join(&config.build_path, "index.json");
@@ -46,7 +52,10 @@ fn generate_model(id: &str, params: Json<Value>) -> String {
     model.gen_command_string(module_name.to_string(), scad_path.to_string());
     model.create_stl().expect("Could not generate the .stl file");
 
-    model.get_identifier()
+    Json(GenerateInfo {
+        filename: model.get_identifier(),
+        dimensions: model.get_dimensions().expect("Could not determine dimensions of model")
+    })
 }
 
 #[get["/<id>"]]
