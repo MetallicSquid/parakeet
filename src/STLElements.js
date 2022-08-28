@@ -3,8 +3,8 @@ import {extend, useFrame, useLoader, useThree} from "@react-three/fiber";
 import {STLLoader} from "three/examples/jsm/loaders/STLLoader";
 import {OrbitControls} from "three/examples/jsm/controls/OrbitControls";
 import {Checkbox, Tooltip, Typography, IconButton} from "@mui/material";
-import {Autorenew, LineAxis, PhotoCamera} from "@mui/icons-material";
-import {AxesHelper, Box3} from "three";
+import {Autorenew, FlipCameraIos, GridOn, LineAxis} from "@mui/icons-material";
+import {AxesHelper, GridHelper} from 'three'
 
 extend({ OrbitControls });
 
@@ -47,7 +47,17 @@ export function CameraControls(props) {
 
 export function Axes(props) {
     if (props.axes) {
-        return <primitive object={new AxesHelper(props.size)} />
+        const rotatedAxesHelper = new AxesHelper(props.size);
+        rotatedAxesHelper.rotation.x = Math.PI / 2;
+        return <primitive object={rotatedAxesHelper} />
+    }
+}
+
+export function GridPlane(props) {
+    if (props.grid) {
+        const rotatedGridHelper = new GridHelper(props.size, 10);
+        rotatedGridHelper.rotation.x = Math.PI / 2;
+        return <primitive object={rotatedGridHelper} />
     }
 }
 
@@ -93,7 +103,7 @@ export class TimeSinceUpdate extends React.Component {
 
 export function CheckAutoRotate(props) {
     return (
-        <Tooltip title={"Toggle Rotation"}>
+        <Tooltip title={"Toggle Auto-Rotation"}>
             <Checkbox defaultChecked={true} onChange={props.onChange} icon={<Autorenew />} checkedIcon={<Autorenew color="primary" />} />
         </Tooltip>
     )
@@ -107,11 +117,19 @@ export function CheckAxes(props) {
     )
 }
 
-export function ResetCamera(props) {
+export function CheckGrid(props) {
     return (
-        <Tooltip title={"Reset Camera"}>
+        <Tooltip title={"Toggle Grid"}>
+            <Checkbox defaultChecked={false} onChange={props.onChange} icon={<GridOn />} checkedIcon={<GridOn color="primary" />} />
+        </Tooltip>
+    )
+}
+
+export function ButtonResetCamera(props) {
+    return (
+        <Tooltip title={"Reset Camera Position"}>
             <IconButton onClick={props.onClick} color="primary">
-                <PhotoCamera />
+                <FlipCameraIos />
             </IconButton>
         </Tooltip>
     )

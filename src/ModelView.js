@@ -6,9 +6,12 @@ import {
     RenderSTL,
     CameraControls,
     Axes,
+    GridPlane,
     TimeSinceUpdate,
     CheckAutoRotate,
-    CheckAxes, ResetCamera
+    CheckAxes,
+    ButtonResetCamera,
+    CheckGrid
 } from "./STLElements";
 import React, {Suspense, useState} from 'react';
 import {
@@ -93,13 +96,14 @@ function ModelView(props) {
 
     const [autoRotate, setAutoRotate] = useState(true);
     const [axes, setAxes] = useState(false);
+    const [grid, setGrid] = useState(false);
     const [cameraReset, setCameraReset] = useState(true);
 
     if (stl === "") {
         genStl(model.id, formValues, setStl, setDimensions);
     }
 
-    const onStlChange = (event) => {
+    const onStlChange = () => {
         genStl(model.id, formValues, setStl, setDimensions);
     }
 
@@ -109,6 +113,10 @@ function ModelView(props) {
 
     const onAxesChange = (event) => {
         setAxes(event.target.checked);
+    }
+
+    const onGridChange = (event) => {
+        setGrid(event.target.checked);
     }
 
     const onCameraReset = () => {
@@ -169,7 +177,8 @@ function ModelView(props) {
                                 <TimeSinceUpdate />
                                 <CheckAutoRotate onChange={onAutoRotateChange} />
                                 <CheckAxes onChange={onAxesChange} />
-                                <ResetCamera onClick={onCameraReset} />
+                                <CheckGrid onChange={onGridChange} />
+                                <ButtonResetCamera onClick={onCameraReset} />
                             </Stack>
                         </Paper>
                     </Grid>
@@ -188,6 +197,7 @@ function ModelView(props) {
                             </Suspense>
                             <CameraControls autoRotate={autoRotate} />
                             <Axes axes={axes} size={Math.max(dimensions[0], dimensions[1], dimensions[2])} />
+                            <GridPlane grid={grid} size={Math.max(dimensions[0], dimensions[1], dimensions[2]) * 2} />
                         </Canvas>
                     </Paper>
                 </Grid>
