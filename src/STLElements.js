@@ -102,7 +102,7 @@ export function CheckAutoRotate(props) {
 export function CheckAxes(props) {
     return (
         <Tooltip title={"Toggle Axes"}>
-            <Checkbox defaultChecked={true} onChange={props.onChange} icon={<LineAxis />} checkedIcon={<LineAxis color="primary" />} />
+            <Checkbox defaultChecked={false} onChange={props.onChange} icon={<LineAxis />} checkedIcon={<LineAxis color="primary" />} />
         </Tooltip>
     )
 }

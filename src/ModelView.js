@@ -92,7 +92,7 @@ function ModelView(props) {
     const [dimensions, setDimensions] = useState([50.0, 50.0, 50.0])
 
     const [autoRotate, setAutoRotate] = useState(true);
-    const [axes, setAxes] = useState(true);
+    const [axes, setAxes] = useState(false);
     const [cameraReset, setCameraReset] = useState(true);
 
     if (stl === "") {
