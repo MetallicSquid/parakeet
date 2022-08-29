@@ -7,12 +7,15 @@ import {
     CameraControls,
     Axes,
     GridPlane,
-    TimeSinceUpdate,
+} from "./CanvasElements";
+import { TimeSinceUpdate } from "./ModelInfo"
+import {
     CheckAutoRotate,
     CheckAxes,
     ButtonResetCamera,
-    CheckGrid
-} from "./STLElements";
+    CheckGrid,
+    ColourPicker, CheckWireframe
+} from "./Toolbar"
 import React, {Suspense, useState} from 'react';
 import {
     Grid,
@@ -97,6 +100,7 @@ function ModelView(props) {
     const [autoRotate, setAutoRotate] = useState(true);
     const [axes, setAxes] = useState(false);
     const [grid, setGrid] = useState(false);
+    const [wireframe, setWireframe] = useState(false);
     const [cameraReset, setCameraReset] = useState(true);
 
     if (stl === "") {
@@ -119,9 +123,15 @@ function ModelView(props) {
         setGrid(event.target.checked);
     }
 
+    const onWireframeChange = (event) => {
+        setWireframe(event.target.checked);
+    }
+
     const onCameraReset = () => {
         setCameraReset(true);
     }
+
+
 
     return (
         <Box sx={{flexGrow: 1, height: "100vh"}}>
@@ -168,16 +178,22 @@ function ModelView(props) {
 
                     <Grid item>
                         <Paper elevation={2}>
+                            <TimeSinceUpdate />
+                        </Paper>
+                    </Grid>
+
+                    <Grid item>
+                        <Paper elevation={2}>
                             <Stack
                                 direction="row"
                                 alignItems="center"
                                 justifyContent="flex-start"
                                 spacing={4}
                             >
-                                <TimeSinceUpdate />
                                 <CheckAutoRotate onChange={onAutoRotateChange} />
                                 <CheckAxes onChange={onAxesChange} />
                                 <CheckGrid onChange={onGridChange} />
+                                <CheckWireframe onChange={onWireframeChange} />
                                 <ButtonResetCamera onClick={onCameraReset} />
                             </Stack>
                         </Paper>
@@ -187,13 +203,14 @@ function ModelView(props) {
                 <Grid item xs overflow="hidden" height="100%">
                     <Paper elevation={2} sx={{height: "100%"}}>
                         <Canvas camera={{up: [0, 0, 1]}}>
-                        <Suspense fallback={null}>
-                            <RenderSTL
-                                stl={stl}
-                                dimensions={dimensions}
-                                cameraReset={cameraReset}
-                                setCameraReset={setCameraReset}
-                            />
+                            <Suspense fallback={null}>
+                                <RenderSTL
+                                    stl={stl}
+                                    dimensions={dimensions}
+                                    cameraReset={cameraReset}
+                                    setCameraReset={setCameraReset}
+                                    wireframe={wireframe}
+                                />
                             </Suspense>
                             <CameraControls autoRotate={autoRotate} />
                             <Axes axes={axes} size={Math.max(dimensions[0], dimensions[1], dimensions[2])} />
