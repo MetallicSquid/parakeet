@@ -6,7 +6,7 @@ import {
     GridOn,
     LineAxis,
     Pentagon,
-    PentagonOutlined
+    PentagonOutlined, Tune
 } from "@mui/icons-material";
 
 export function CheckAutoRotate(props) {
@@ -48,5 +48,16 @@ export function ButtonResetCamera(props) {
                 <FlipCameraIos />
             </IconButton>
         </Tooltip>
+    )
+}
+
+export function ButtonResetParameters(props) {
+    return (
+        <Tooltip title="Reset Model Parameters">
+            <IconButton onClick={props.onClick} color="primary">
+                <Tune />
+            </IconButton>
+        </Tooltip>
+
     )
 }

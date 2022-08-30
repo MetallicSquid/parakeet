@@ -14,7 +14,7 @@ import {
     CheckAxes,
     ButtonResetCamera,
     CheckGrid,
-    ColourPicker, CheckWireframe
+    ColourPicker, CheckWireframe, ButtonResetParameters
 } from "./Toolbar"
 import React, {Suspense, useState} from 'react';
 import {
@@ -133,7 +133,10 @@ function ModelView(props) {
         setCameraReset(true);
     }
 
-
+    const onParametersReset = () => {
+        setFormValues(default_values);
+        genStl(model.id, default_values, setStl, setDimensions);
+    }
 
     return (
         <Box sx={{flexGrow: 1, height: "100vh"}}>
@@ -200,6 +203,7 @@ function ModelView(props) {
                                 <CheckWireframe onChange={onWireframeChange} />
                                 <Divider orientation="vertical" flexItem />
                                 <ButtonResetCamera onClick={onCameraReset} />
+                                <ButtonResetParameters onClick={onParametersReset} />
                             </Stack>
                         </Paper>
                     </Grid>
