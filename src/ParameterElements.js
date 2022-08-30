@@ -227,6 +227,7 @@ function ListRestriction(name, default_value, allowed, index, formValues, setFor
     let value = formValues[index];
 
     const handleChange = (event) => {
+        console.log(event.target.value);
         setFormValues({
             ...formValues,
             [index]: (event.target.value)
@@ -243,12 +244,12 @@ function ListRestriction(name, default_value, allowed, index, formValues, setFor
             </Grid>
             <Grid item>
                 <Select
+                    defaultValue={default_value}
                     value={value}
                     size="small"
                     onChange={handleChange}
                     displayEmpty
                 >
-                    <MenuItem value={default_value}>{default_value}</MenuItem>
                     {allowed.map(element => (
                         <MenuItem value={element}>{element}</MenuItem>
                     ))}

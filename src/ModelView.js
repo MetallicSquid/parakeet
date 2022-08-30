@@ -14,9 +14,10 @@ import {
     CheckAxes,
     ButtonResetCamera,
     CheckGrid,
-    ColourPicker, CheckWireframe, ButtonResetParameters
+    CheckWireframe,
+    ButtonResetParameters
 } from "./Toolbar"
-import React, {Suspense, useState} from 'react';
+import React, {Suspense, useEffect, useState} from 'react';
 import {
     Grid,
     Stack,
@@ -95,8 +96,13 @@ function ModelView(props) {
         }
     }
 
+    // FIXME: I feel like I might be abusing usage of state at this point
+    const [prevValues, setPrevValues] = useState({});
     const [formValues, setFormValues] = useState(default_values);
+
+    const [requestStl, setRequestStl] = useState(false);
     const [stl, setStl] = useState("");
+    const [newModel, setNewModel] = useState(false);
     const [dimensions, setDimensions] = useState([50.0, 50.0, 50.0])
 
     const [autoRotate, setAutoRotate] = useState(true);
@@ -105,12 +111,30 @@ function ModelView(props) {
     const [wireframe, setWireframe] = useState(false);
     const [cameraReset, setCameraReset] = useState(true);
 
-    if (stl === "") {
+    // FIXME: These two useEffects should be merged into one but timings need to be sorted out
+    useEffect(() => {
         genStl(model.id, formValues, setStl, setDimensions);
-    }
+        setPrevValues(formValues);
+    }, [newModel]);
+
+    useEffect(() => {
+        if (requestStl) {
+            let changed = false;
+            for (let key in formValues) {
+                if (formValues[key] !== prevValues[key]) {
+                    changed = true;
+                }
+            }
+
+            if (changed) {
+                setNewModel(!newModel);
+            }
+            setRequestStl(false);
+        }
+    }, [formValues])
 
     const onStlChange = () => {
-        genStl(model.id, formValues, setStl, setDimensions);
+        setRequestStl(true);
     }
 
     const onAutoRotateChange = (event) => {
@@ -135,7 +159,7 @@ function ModelView(props) {
 
     const onParametersReset = () => {
         setFormValues(default_values);
-        genStl(model.id, default_values, setStl, setDimensions);
+        onStlChange();
     }
 
     return (
@@ -178,17 +202,7 @@ function ModelView(props) {
                                 setFormValues={setFormValues}
                                 onStlChange={onStlChange}
                             />
-                        </Paper>
-                    </Grid>
-
-                    <Grid item>
-                        <Paper elevation={2} className="Info-container">
-                            <TimeSinceUpdate />
-                        </Paper>
-                    </Grid>
-
-                    <Grid item>
-                        <Paper elevation={2}>
+                            <Divider />
                             <Stack
                                 direction="row"
                                 alignItems="center"
@@ -205,6 +219,12 @@ function ModelView(props) {
                                 <ButtonResetCamera onClick={onCameraReset} />
                                 <ButtonResetParameters onClick={onParametersReset} />
                             </Stack>
+                        </Paper>
+                    </Grid>
+
+                    <Grid item>
+                        <Paper elevation={2} className="Info-container">
+                            <TimeSinceUpdate />
                         </Paper>
                     </Grid>
                 </Grid>
