@@ -1,6 +1,13 @@
 import React from "react";
 import {Checkbox, IconButton, Tooltip} from "@mui/material";
-import {Autorenew, FlipCameraIos, GridOn, LineAxis, PentagonOutlined, SquareRounded} from "@mui/icons-material";
+import {
+    Autorenew,
+    FlipCameraIos,
+    GridOn,
+    LineAxis,
+    Pentagon,
+    PentagonOutlined
+} from "@mui/icons-material";
 
 export function CheckAutoRotate(props) {
     return (
@@ -29,7 +36,7 @@ export function CheckGrid(props) {
 export function CheckWireframe(props) {
     return (
         <Tooltip title="Toggle Wireframe">
-            <Checkbox defaultChecked={false} onChange={props.onChange} icon={<PentagonOutlined />} checkedIcon={<PentagonOutlined color="primary" />} />
+            <Checkbox defaultChecked={false} onChange={props.onChange} icon={<PentagonOutlined />} checkedIcon={<Pentagon color="primary" />} />
         </Tooltip>
     )
 }

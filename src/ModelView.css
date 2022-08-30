@@ -1,3 +1,20 @@
-.Title-text {
-    font-weight: bold;
+.Description-text {
+    padding: 10px;
 }
+
+.Module-subtitle {
+    padding: 15px 10px 0;
+}
+
+.Parameter-container {
+    padding: 5px 15px 15px;
+}
+
+.Info-container {
+    padding: 10px;
+}
+
+.Toolbar {
+    padding: 5px 10px;
+}
+

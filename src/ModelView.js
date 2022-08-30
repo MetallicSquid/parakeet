@@ -43,14 +43,16 @@ function ParamView(props) {
         <>
             {props.modules.map((module) => {
                 return (
-                    <div>
-                        <Typography variant="h6"><b>{module.name}</b></Typography>
-                        {module.parameters.map((parameter) => {
-                            return (
-                                RenderParam(parameter, props.formValues, props.setFormValues, props.onStlChange)
-                            );
-                        })}
-                    </div>
+                    <>
+                        <Typography variant="h6" className="Module-subtitle"><b>{module.name}</b></Typography>
+                        <div className="Parameter-container">
+                            {module.parameters.map((parameter) => {
+                                return (
+                                    RenderParam(parameter, props.formValues, props.setFormValues, props.onStlChange)
+                                );
+                            })}
+                        </div>
+                    </>
                 );
             })}
         </>
@@ -148,7 +150,7 @@ function ModelView(props) {
                     container
                     item
                     direction="column"
-                    justifyContent="space-around"
+                    justifyContent="space-between"
                     alignItems="stretch"
                     spacing={4}
                     xs={4}
@@ -158,14 +160,14 @@ function ModelView(props) {
                 >
                     <Grid item>
                         <Container>
-                            <Typography fontWeight="bold" variant="h2">{model.name}</Typography>
+                            <Typography variant="h2" fontWeight="bold">{model.name}</Typography>
                             <Typography variant="h4">by {model.author}</Typography>
                         </Container>
                     </Grid>
 
                     <Grid item>
                         <Paper elevation={2}>
-                            <Typography>{model.description}</Typography>
+                            <Typography className="Description-text">{model.description}</Typography>
                             <Divider />
                             <ParamView
                                 modules={model.modules}
@@ -177,7 +179,7 @@ function ModelView(props) {
                     </Grid>
 
                     <Grid item>
-                        <Paper elevation={2}>
+                        <Paper elevation={2} className="Info-container">
                             <TimeSinceUpdate />
                         </Paper>
                     </Grid>
@@ -188,12 +190,15 @@ function ModelView(props) {
                                 direction="row"
                                 alignItems="center"
                                 justifyContent="flex-start"
-                                spacing={4}
+                                spacing={2}
+                                className="Toolbar"
                             >
                                 <CheckAutoRotate onChange={onAutoRotateChange} />
+                                <Divider orientation="vertical" flexItem />
                                 <CheckAxes onChange={onAxesChange} />
                                 <CheckGrid onChange={onGridChange} />
                                 <CheckWireframe onChange={onWireframeChange} />
+                                <Divider orientation="vertical" flexItem />
                                 <ButtonResetCamera onClick={onCameraReset} />
                             </Stack>
                         </Paper>
