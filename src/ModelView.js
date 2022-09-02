@@ -8,7 +8,7 @@ import {
     Axes,
     GridPlane,
 } from "./CanvasElements";
-import { TimeSinceUpdate } from "./ModelInfo"
+import {ButtonDownload, ModelDimensions, TimeSinceUpdate} from "./ModelInfo"
 import {
     CheckAutoRotate,
     CheckAxes,
@@ -26,8 +26,13 @@ import {
     Typography,
     Divider,
     Box,
+    List,
+    ListItem,
+    ListItemText,
+    ListItemIcon
 } from "@mui/material";
 import {Canvas} from "@react-three/fiber";
+import {AccessTime, Straighten} from "@mui/icons-material";
 
 function GatherModelInfo(models) {
     const { id } = useParams();
@@ -108,8 +113,11 @@ function ModelView(props) {
     const [wireframe, setWireframe] = useState(false);
     const [cameraReset, setCameraReset] = useState(true);
 
+    const [updateTime, setUpdateTime] = useState((new Date()));
+
     useEffect(() => {
         genStl(model.id, committedValues, setStl, setDimensions);
+        setUpdateTime((new Date()));
     }, [committedValues])
 
 
@@ -206,8 +214,28 @@ function ModelView(props) {
                     </Grid>
 
                     <Grid item>
-                        <Paper elevation={2} className="Info-container">
-                            <TimeSinceUpdate />
+                        <Paper elevation={2} >
+                            <List>
+                                <ListItem>
+                                    <ListItemIcon>
+                                        <AccessTime />
+                                    </ListItemIcon>
+                                    <ListItemText>
+                                        <TimeSinceUpdate updateTime={updateTime} />
+                                    </ListItemText>
+                                </ListItem>
+                                <ListItem>
+                                    <ListItemIcon>
+                                        <Straighten />
+                                    </ListItemIcon>
+                                    <ListItemText>
+                                        <ModelDimensions dimensions={dimensions} />
+                                    </ListItemText>
+                                </ListItem>
+                                <ListItem>
+                                    <ButtonDownload stl={stl}/>
+                                </ListItem>
+                            </List>
                         </Paper>
                     </Grid>
                 </Grid>
