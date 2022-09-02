@@ -96,14 +96,11 @@ function ModelView(props) {
         }
     }
 
-    // FIXME: I feel like I might be abusing usage of state at this point
-    const [prevValues, setPrevValues] = useState({});
     const [formValues, setFormValues] = useState(default_values);
+    const [committedValues, setCommittedValues] = useState(default_values);
 
-    const [requestStl, setRequestStl] = useState(false);
     const [stl, setStl] = useState("");
-    const [newModel, setNewModel] = useState(false);
-    const [dimensions, setDimensions] = useState([50.0, 50.0, 50.0])
+    const [dimensions, setDimensions] = useState([0.0, 0.0, 0.0])
 
     const [autoRotate, setAutoRotate] = useState(true);
     const [axes, setAxes] = useState(false);
@@ -111,30 +108,16 @@ function ModelView(props) {
     const [wireframe, setWireframe] = useState(false);
     const [cameraReset, setCameraReset] = useState(true);
 
-    // FIXME: These two useEffects should be merged into one but timings need to be sorted out
     useEffect(() => {
-        genStl(model.id, formValues, setStl, setDimensions);
-        setPrevValues(formValues);
-    }, [newModel]);
+        genStl(model.id, committedValues, setStl, setDimensions);
+    }, [committedValues])
 
-    useEffect(() => {
-        if (requestStl) {
-            let changed = false;
-            for (let key in formValues) {
-                if (formValues[key] !== prevValues[key]) {
-                    changed = true;
-                }
-            }
 
-            if (changed) {
-                setNewModel(!newModel);
-            }
-            setRequestStl(false);
-        }
-    }, [formValues])
-
-    const onStlChange = () => {
-        setRequestStl(true);
+    const onStlChange = (index, value) => {
+        setCommittedValues({
+            ...committedValues,
+            [index]: value
+        })
     }
 
     const onAutoRotateChange = (event) => {
@@ -159,7 +142,7 @@ function ModelView(props) {
 
     const onParametersReset = () => {
         setFormValues(default_values);
-        onStlChange();
+        setCommittedValues(default_values);
     }
 
     return (

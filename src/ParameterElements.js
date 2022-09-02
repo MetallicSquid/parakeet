@@ -27,12 +27,20 @@ export function IntRange(parameter, formValues, setFormValues, onStlChange) {
         });
     };
 
+    let prevValue;
+    const handleSliderCommitted = (event, newValue) => {
+        if (prevValue !== newValue) {
+            onStlChange(index, newValue);
+            prevValue = newValue;
+        }
+    }
+
     const handleInputChange = (event) => {
         setFormValues({
             ...formValues,
             [index]: (event.target.value === "" ? "" : Number(event.target.value))
         });
-        onStlChange();
+        onStlChange(index, (event.target.value === "" ? "" : Number(event.target.value)));
     };
 
     const handleBlur = () => {
@@ -75,7 +83,7 @@ export function IntRange(parameter, formValues, setFormValues, onStlChange) {
                     min={minimum}
                     max={maximum}
                     onChange={handleSliderChange}
-                    onChangeCommitted={onStlChange}
+                    onChangeCommitted={handleSliderCommitted}
                     aria-labelledby={"int-range-slider"}
                 />
             </Grid>
@@ -118,12 +126,20 @@ export function FloatRange(parameter, formValues, setFormValues, onStlChange) {
         });
     };
 
+    let prevValue;
+    const handleSliderCommitted = (event, newValue) => {
+        if (prevValue !== newValue) {
+            onStlChange(index, newValue);
+            prevValue = newValue;
+        }
+    }
+
     const handleInputChange = (event) => {
         setFormValues({
             ...formValues,
             [index]: (event.target.value === "" ? "" : Number(event.target.value))
         });
-        onStlChange();
+        onStlChange(index, (event.target.value === "" ? "" : Number(event.target.value)));
     };
 
     const handleBlur = () => {
@@ -161,7 +177,7 @@ export function FloatRange(parameter, formValues, setFormValues, onStlChange) {
                     min={minimum}
                     max={maximum}
                     onChange={handleSliderChange}
-                    onChangeCommitted={onStlChange}
+                    onChangeCommitted={handleSliderCommitted}
                     aria-labelledby={"float-range-slider"}
                 />
             </Grid>
@@ -203,6 +219,14 @@ export function StringLength(parameter, formValues, setFormValues, onStlChange) 
         }
     };
 
+    let prevValue;
+    const handleInputCommitted = (event) => {
+        if (prevValue !== event.target.value) {
+            onStlChange(index, event.target.value);
+            prevValue = event.target.value
+        }
+    }
+
     return (
         <Grid container spacing={2} alignItems="center" className="Parameter-grid">
             <Grid item>
@@ -214,7 +238,7 @@ export function StringLength(parameter, formValues, setFormValues, onStlChange) 
                 <TextField
                     value={value}
                     onChange={handleInputChange}
-                    onChangeCapture={onStlChange}
+                    onChangeCapture={handleInputCommitted}
                     size="small"
                 />
             </Grid>
@@ -227,12 +251,11 @@ function ListRestriction(name, default_value, allowed, index, formValues, setFor
     let value = formValues[index];
 
     const handleChange = (event) => {
-        console.log(event.target.value);
         setFormValues({
             ...formValues,
             [index]: (event.target.value)
         });
-        onStlChange();
+        onStlChange(index, event.target.value);
     };
 
     return (
@@ -300,7 +323,7 @@ export function BoolCheck(parameter, formValues, setFormValues, onStlChange) {
             ...formValues,
             [index]: (event.target.checked)
         });
-        onStlChange();
+        onStlChange(index, event.target.checked);
     };
 
     return (
