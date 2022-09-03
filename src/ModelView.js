@@ -1,5 +1,3 @@
-import './ModelView.css';
-
 import { useParams } from 'react-router-dom';
 import { RenderParam } from './ParameterElements';
 import {
@@ -49,16 +47,16 @@ function ParamView(props) {
         <>
             {props.modules.map((module) => {
                 return (
-                    <>
+                    <div style={{width: "100%"}}>
                         <Typography variant="h6" className="Module-subtitle"><b>{module.name}</b></Typography>
-                        <div className="Parameter-container">
+                        <div style={{width: "100%"}}>
                             {module.parameters.map((parameter) => {
                                 return (
                                     RenderParam(parameter, props.formValues, props.setFormValues, props.onStlChange)
                                 );
                             })}
                         </div>
-                    </>
+                    </div>
                 );
             })}
         </>
@@ -164,80 +162,73 @@ function ModelView(props) {
                 padding={4}
                 height="100%"
             >
-                <Grid
-                    container
-                    item
-                    direction="column"
-                    justifyContent="space-between"
-                    alignItems="stretch"
-                    spacing={4}
-                    xs={4}
-                    height="100%"
-                    // FIXME: This behaviour isn't ideal honestly, maybe `minSize` is needed
-                    overflow="hidden"
-                >
-                    <Grid item>
-                        <Container>
-                            <Typography variant="h2" fontWeight="bold">{model.name}</Typography>
-                            <Typography variant="h4">by {model.author}</Typography>
-                        </Container>
-                    </Grid>
-
-                    <Grid item>
-                        <Paper elevation={2}>
-                            <Typography className="Description-text">{model.description}</Typography>
+                <Grid item xs={4} height="100%">
+                    <Paper elevation={2} style={{height: "100%", overflow: "auto"}}>
+                        <List>
+                            <ListItem>
+                                <div>
+                                    <Typography variant="h3" fontWeight="bold">{model.name}</Typography>
+                                    <Typography variant="h5">by {model.author}</Typography>
+                                </div>
+                            </ListItem>
                             <Divider />
-                            <ParamView
-                                modules={model.modules}
-                                formValues={formValues}
-                                setFormValues={setFormValues}
-                                onStlChange={onStlChange}
-                            />
+                            <ListItem>
+                                <Typography className="Description-text">{model.description}</Typography>
+                            </ListItem>
                             <Divider />
-                            <Stack
-                                direction="row"
-                                alignItems="center"
-                                justifyContent="flex-start"
-                                spacing={2}
-                                className="Toolbar"
-                            >
-                                <CheckAutoRotate onChange={onAutoRotateChange} />
-                                <Divider orientation="vertical" flexItem />
-                                <CheckAxes onChange={onAxesChange} />
-                                <CheckGrid onChange={onGridChange} />
-                                <CheckWireframe onChange={onWireframeChange} />
-                                <Divider orientation="vertical" flexItem />
-                                <ButtonResetCamera onClick={onCameraReset} />
-                                <ButtonResetParameters onClick={onParametersReset} />
-                            </Stack>
-                        </Paper>
-                    </Grid>
-
-                    <Grid item>
-                        <Paper elevation={2} >
-                            <List>
-                                <ListItem>
-                                    <ListItemIcon>
-                                        <AccessTime />
-                                    </ListItemIcon>
-                                    <ListItemText>
-                                        <TimeSinceUpdate updateTime={updateTime} />
-                                    </ListItemText>
-                                </ListItem>
-                                <ListItem>
-                                    <ListItemIcon>
-                                        <Straighten />
-                                    </ListItemIcon>
-                                    <ListItemText>
-                                        <ModelDimensions dimensions={dimensions} />
-                                    </ListItemText>
-                                </ListItem>
-                                <ListItem>
-                                    <ButtonDownload stl={stl}/>
-                                </ListItem>
-                            </List>
-                        </Paper>
-                    </Grid>
+                            <ListItem>
+                                <ParamView
+                                    modules={model.modules}
+                                    formValues={formValues}
+                                    setFormValues={setFormValues}
+                                    onStlChange={onStlChange}
+                                />
+                            </ListItem>
+                            <Divider />
+                            <ListItem>
+                                <Stack
+                                    direction="row"
+                                    alignItems="center"
+                                    justifyContent="flex-start"
+                                    spacing={2}
+                                    className="Toolbar"
+                                >
+                                    <CheckAutoRotate onChange={onAutoRotateChange} />
+                                    <Divider orientation="vertical" flexItem />
+                                    <CheckAxes onChange={onAxesChange} />
+                                    <CheckGrid onChange={onGridChange} />
+                                    <CheckWireframe onChange={onWireframeChange} />
+                                    <Divider orientation="vertical" flexItem />
+                                    <ButtonResetCamera onClick={onCameraReset} />
+                                    <ButtonResetParameters onClick={onParametersReset} />
+                                </Stack>
+                            </ListItem>
+                            <Divider />
+                            <ListItem>
+                                <List>
+                                    <ListItem>
+                                        <ListItemIcon>
+                                            <AccessTime />
+                                        </ListItemIcon>
+                                        <ListItemText>
+                                            <TimeSinceUpdate updateTime={updateTime} />
+                                        </ListItemText>
+                                    </ListItem>
+                                    <ListItem>
+                                        <ListItemIcon>
+                                            <Straighten />
+                                        </ListItemIcon>
+                                        <ListItemText>
+                                            <ModelDimensions dimensions={dimensions} />
+                                        </ListItemText>
+                                    </ListItem>
+                                    <ListItem>
+                                        <ButtonDownload stl={stl}/>
+                                    </ListItem>
+                                </List>
+                            </ListItem>
+                        </List>
+                    </Paper>
                 </Grid>
 
                 <Grid item xs overflow="hidden" height="100%">
