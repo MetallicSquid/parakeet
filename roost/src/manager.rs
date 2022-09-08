@@ -1,12 +1,17 @@
-// TODO: Implement file deletion algorithm (based on usage and time alive)
-
 use std::error::Error;
 use std::{fmt, fs};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 use fs::read_to_string;
 use serde_json::Value;
+use rocket::{Rocket, Build, futures};
+use rocket::fairing::{self, AdHoc};
 use rocket::serde::{Serialize, Deserialize, json::Json};
+use rocket_db_pools::{sqlx, Database, Connection};
+
+use futures::{stream::TryStreamExt, future::TryFutureExt};
+
+type DbResult<T, E = rocket::response::Debug<sqlx::Error>> = std::result::Result<T, E>;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ParakeetConfig {
@@ -105,7 +110,7 @@ impl STLModel {
         self.command_string = format!("use <{}>;{}", full_scad_path.to_str().unwrap(), module_scad);
     }
 
-    pub fn create_stl(&self) -> Result<(), Box<dyn Error>> {
+    pub async fn create_stl(&self, db: Connection<Db>) -> Result<(), Box<dyn Error>> {
         if !self.does_stl_exist()? {
             let stl_path: PathBuf = Path::join(&self.config.build_path, &self.get_identifier());
 
@@ -115,9 +120,21 @@ impl STLModel {
                 .output()
                 .expect("Could not generate .stl output");
 
+            let bare = BareModel {
+                id: self.id.to_string(),
+                path: self.get_identifier(),
+                usages: 0
+            };
+
+            create(db, bare)
+                .await?;
+
             if !command.status.success() {
                 Err(ModelError::ScadError(self.id.to_string()))?
             }
+        } else {
+            increment_usages(db, self.get_identifier())
+                .await?;
         }
 
         Ok(())
@@ -199,4 +216,67 @@ impl STLModel {
         // FIXME: Arguably, this should throw an error
         Ok((0.0, 0.0, 0.0))
     }
+}
+
+#[derive(Database)]
+#[database("sqlx")]
+pub struct Db(sqlx::SqlitePool);
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+struct BareModel {
+    pub id: String,
+    pub path: String,
+    pub usages: i64
+}
+
+async fn create(mut db: Connection<Db>, model: BareModel) -> DbResult<(), Box<dyn Error>> {
+    sqlx::query!("INSERT INTO models (id, path, usages) VALUES (?, ?, ?)", model.id, model.path, model.usages)
+        .execute(&mut *db)
+        .await?;
+
+    Ok(())
+}
+
+async fn get_usages(mut db: Connection<Db>, path: String) -> DbResult<i64, Box<dyn Error>> {
+    let usages: i64 = sqlx::query!("SELECT usages FROM models WHERE path = ?", path)
+        .fetch_one(&mut *db)
+        .map_ok(|record| record.usages)
+        .await?;
+
+    Ok(usages)
+}
+
+async fn increment_usages(mut db: Connection<Db>, path: String) -> DbResult<(), Box<dyn Error>> {
+    let usages: i64 = sqlx::query!("SELECT usages FROM models WHERE path = ?", path)
+        .fetch_one(&mut *db)
+        .map_ok(|record| record.usages)
+        .await?
+        + 1;
+
+    sqlx::query!("UPDATE models SET usages = ? WHERE path = ?", usages, path)
+        .execute(&mut *db)
+        .await?;
+
+    Ok(())
+}
+
+async fn run_migrations(rocket: Rocket<Build>) -> fairing::Result {
+    match Db::fetch(&rocket) {
+        Some(db) => match sqlx::migrate!("database/migrations").run(&**db).await {
+            Ok(_) => Ok(rocket),
+            Err(e) => {
+                // FIXME: Should throw an actual error message
+                println!("Failed to initialise SQLx database: {}", e);
+                Err(rocket)
+            }
+        },
+        None => Err(rocket),
+    }
+}
+
+pub fn stage_db() -> AdHoc {
+    AdHoc::on_ignite("SQLx Stage", |rocket| async {
+        rocket.attach(Db::init())
+            .attach(AdHoc::try_on_ignite("SQLx Migrations", run_migrations))
+    })
 }

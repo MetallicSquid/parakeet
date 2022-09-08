@@ -33,4 +33,8 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-.idea/
+# sqlite database
+*.sqlite-shm
+*.sqlite-wal
+
+/.idea
