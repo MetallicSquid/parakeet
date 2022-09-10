@@ -30,6 +30,8 @@ enum Commands {
         models_path: PathBuf,
         /// Build directory path
         build_path: PathBuf,
+        /// Maximum number of .stl models stored at any one time
+        model_limit: i64
     },
     /// Index the models directory and output an 'index.json' file
     #[structopt(name = "index")]
@@ -44,11 +46,16 @@ fn main() {
     let config_models_path = &paths[0];
     let config_build_path= &paths[1];
 
+    // For use upon changing ParakeetConfig format
+    // let config_models_path = &PathBuf::from("../models/");
+    // let config_build_path= &PathBuf::from("../build");
+
     match Commands::from_args() {
         Commands::Config {
             models_path,
             build_path,
-        } => match config::config(models_path, build_path) {
+            model_limit
+        } => match config::config(models_path, build_path, model_limit) {
             Ok(_) => println!("Successfully configured plume. Plume is now ready to use."),
             Err(error) => println!("Failed to configure plume: [{}]", error),
         },

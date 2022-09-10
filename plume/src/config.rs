@@ -8,6 +8,7 @@ use std::env;
 struct ParakeetConfig {
     models_path: PathBuf,
     build_path: PathBuf,
+    model_limit: i64
 }
 
 impl ::std::default::Default for ParakeetConfig {
@@ -15,12 +16,13 @@ impl ::std::default::Default for ParakeetConfig {
         Self {
             models_path: PathBuf::new(),
             build_path: PathBuf::new(),
+            model_limit: 100
         }
     }
 }
 
 // Sets up configuration for plume
-pub fn config(models_path: PathBuf, build_path :PathBuf) -> Result<(), Box<dyn Error>> {
+pub fn config(models_path: PathBuf, build_path :PathBuf, model_limit: i64) -> Result<(), Box<dyn Error>> {
     metadata(&models_path)?;
     metadata(&build_path)?;
 
@@ -29,6 +31,7 @@ pub fn config(models_path: PathBuf, build_path :PathBuf) -> Result<(), Box<dyn E
         ParakeetConfig {
             models_path: canonicalize(models_path)?,
             build_path: canonicalize(build_path)?,
+            model_limit
         },
     )?;
 

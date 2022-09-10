@@ -36,5 +36,6 @@ yarn-error.log*
 # sqlite database
 *.sqlite-shm
 *.sqlite-wal
+*.sqlite
 
 /.idea

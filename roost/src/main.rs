@@ -47,7 +47,7 @@ async fn generate_model(db: Connection<manager::Db>, id: &str, params: Json<Valu
         config,
         parameters: vec![],
         command_string: String::new(),
-        usages: 0
+        usages: 1
     };
 
     model.parse_parameters(&index_json[0]["modules"][0]["parameters"], &params);
