@@ -3,7 +3,9 @@ CREATE TABLE Models (
     name VARCHAR NOT NULL,
     creation_date VARCHAR NOT NULL,
     description VARCHAR NOT NULL,
-    author VARCHAR NOT NULL
+    author VARCHAR NOT NULL,
+    image_path VARCHAR NOT NULL,
+    scad_path VARCHAR NOT NULL
 );
 
 CREATE TABLE Parts (
@@ -45,7 +47,7 @@ CREATE TABLE FloatRangeParameters (
         REFERENCES Parts (part_id)
 );
 
-CREATE TABLE StringParameters (
+CREATE TABLE StringLengthParameters (
     parameter_id INTEGER PRIMARY KEY AUTOINCREMENT,
     name VARCHAR NOT NULL,
     default_value VARCHAR NOT NULL,
@@ -93,6 +95,23 @@ CREATE TABLE FloatListParameters (
 CREATE TABLE FloatListItems (
     item_id INTEGER PRIMARY KEY AUTOINCREMENT,
     value REAL NOT NULL,
+    parameter_id INTEGER NOT NULL,
+    FOREIGN KEY (parameter_id)
+        REFERENCES FloatListParameters (parameter_id)
+);
+
+CREATE TABLE StringListParameters (
+    parameter_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name VARCHAR NOT NULL,
+    default_value VARCHAR NOT NULL,
+    part_id INTEGER NOT NULL,
+    FOREIGN KEY (part_id)
+        REFERENCES Parts (part_id)
+);
+
+CREATE TABLE StringListItems (
+    item_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    value VARCHAR NOT NULL,
     parameter_id INTEGER NOT NULL,
     FOREIGN KEY (parameter_id)
         REFERENCES FloatListParameters (parameter_id)
