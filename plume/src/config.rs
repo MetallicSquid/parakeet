@@ -8,6 +8,7 @@ use std::env;
 struct ParakeetConfig {
     models_path: PathBuf,
     build_path: PathBuf,
+    database_path: PathBuf,
     model_limit: i64
 }
 
@@ -16,21 +17,24 @@ impl ::std::default::Default for ParakeetConfig {
         Self {
             models_path: PathBuf::new(),
             build_path: PathBuf::new(),
+            database_path: PathBuf::new(),
             model_limit: 100
         }
     }
 }
 
 // Sets up configuration for plume
-pub fn config(models_path: PathBuf, build_path :PathBuf, model_limit: i64) -> Result<(), Box<dyn Error>> {
+pub fn config(models_path: PathBuf, build_path: PathBuf, database_path: PathBuf, model_limit: i64) -> Result<(), Box<dyn Error>> {
     metadata(&models_path)?;
     metadata(&build_path)?;
+    metadata(&database_path)?;
 
     confy::store(
         "parakeet",
         ParakeetConfig {
             models_path: canonicalize(models_path)?,
             build_path: canonicalize(build_path)?,
+            database_path: canonicalize(database_path)?,
             model_limit
         },
     )?;
@@ -42,5 +46,5 @@ pub fn config(models_path: PathBuf, build_path :PathBuf, model_limit: i64) -> Re
 pub fn get_paths() -> Result<Vec<PathBuf>, Box<dyn Error>> {
     let config: ParakeetConfig = confy::load("parakeet")?;
 
-    Ok(vec![config.models_path, config.build_path])
+    Ok(vec![config.models_path, config.build_path, config.database_path])
 }

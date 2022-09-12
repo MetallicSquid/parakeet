@@ -3,7 +3,6 @@
 // Commands:
 //  * config        -> Sets up the plume configuration with the provided paths
 //  * index         -> Traverses and indexes the models in the models directory
-//  * dist          -> Distributes the indexed files to their relevant directories
 
 mod config;
 mod parse;
@@ -15,6 +14,7 @@ use std::error::Error;
 use std::fs;
 use std::io::Write;
 use std::path::PathBuf;
+use sqlx::{SqlitePool};
 use structopt::StructOpt;
 
 #[derive(StructOpt)]
@@ -30,121 +30,57 @@ enum Commands {
         models_path: PathBuf,
         /// Build directory path
         build_path: PathBuf,
+        /// Database file (.sqlite) path
+        database_path: PathBuf,
         /// Maximum number of .stl models stored at any one time
         model_limit: i64
     },
     /// Index the models directory and output an 'index.json' file
     #[structopt(name = "index")]
     Index {},
-    /// Distribute the indexed model files to their relevant directories
-    #[structopt(name = "dist")]
-    Dist {},
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let paths = config::get_paths().expect("Could not read config information.");
     let config_models_path = &paths[0];
     let config_build_path= &paths[1];
+    let config_database_path = &paths[2];
 
-    // For use upon changing ParakeetConfig format
-    // let config_models_path = &PathBuf::from("../models/");
+    // Development: For use upon changing ParakeetConfig format
+    // let config_models_path = &PathBuf::from("../models");
     // let config_build_path= &PathBuf::from("../build");
+    // let config_database_path = &PathBuf::from("../database");
 
     match Commands::from_args() {
         Commands::Config {
             models_path,
             build_path,
+            database_path,
             model_limit
-        } => match config::config(models_path, build_path, model_limit) {
+        } => match config::config(models_path, build_path, database_path, model_limit) {
             Ok(_) => println!("Successfully configured plume. Plume is now ready to use."),
             Err(error) => println!("Failed to configure plume: [{}]", error),
         },
         Commands::Index {} => {
             let path_str = config_models_path.to_str().unwrap();
-            match index(config_models_path) {
+            let pool: SqlitePool = SqlitePool::connect(&format!("sqlite:{}", &config_database_path.to_str().unwrap()))
+                .await
+                .expect("Failed to connect to database.");
+            match index(config_build_path, config_models_path, pool).await {
                 Ok(_) => println!(
-                    "Successfully indexed `{}`. Outputted to `{}/{}`",
-                    path_str, path_str, "index.json"
+                    "Successfully indexed `{}`. Outputted to `{}`",
+                    path_str,
+                    &config_database_path.to_str().unwrap()
                 ),
                 Err(error) => println!("Failed to index `{}`: [{}]", path_str, error),
             }
         }
-        Commands::Dist {} => {
-            match distribute(config_models_path, config_build_path) {
-                Ok(_) => {
-                    println!("Successfully distributed the files. Parakeet is now ready to use.")
-                }
-                Err(error) => println!("Failed to distribute the files: [{}]", error),
-            }
-        }
     }
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-struct Model {
-    id: String,
-    name: String,
-    date: NaiveDate,
-    description: String,
-    author: String,
-    modules: Vec<parse::Module>,
-    image_path: PathBuf,
-    scad_path: PathBuf,
-}
-
-// Generate a 6 digit ID padded to the left by 0s
-fn generate_id(i: i32) -> String {
-    let mut num_string: String = i.to_string();
-    for _j in 0..(6 - num_string.len()) {
-        num_string = String::from("0") + &num_string;
-    }
-    return num_string;
 }
 
 // Create an `index.json` file in the models directory linking to the relevant information
-fn index(path: &PathBuf) -> Result<(), Box<dyn Error>> {
-    let flattened_models = parse::traverse_models_dir(path, false)?;
-    let mut models: Vec<Model> = Vec::new();
-    let mut counter: i32 = 0;
-
-    for entry in flattened_models {
-        let info_string = fs::read_to_string(&entry.2)?;
-        let info_json: Value = serde_json::from_str(&info_string)?;
-
-        let modules = parse::parse_modules(
-            &info_json["modules"].as_array().unwrap(),
-            info_json["name"].as_str().unwrap().to_string(),
-            &entry.1
-        )?;
-
-        models.push(Model {
-            id: generate_id(counter),
-            name: info_json["name"].as_str().unwrap().to_string(),
-            date: NaiveDate::parse_from_str(&info_json["date"].as_str().unwrap().to_string(), "%Y-%m-%d")?,
-            description: info_json["description"].as_str().unwrap().to_string(),
-            author: info_json["author"].as_str().unwrap().to_string(),
-            modules,
-            image_path: entry.0,
-            scad_path: entry.1,
-        });
-        counter += 1;
-    }
-
-    let mut index_file = fs::File::create(path.join("index.json")).unwrap();
-    writeln!(index_file, "{}", &serde_json::to_string(&models)?)?;
-
-    Ok(())
-}
-
-// Move the indexed model files to their relevant directories for access by parakeet
-// TODO: Add support for non .jpg images
-fn distribute(
-    models_path: &PathBuf,
-    build_path: &PathBuf,
-) -> Result<(), Box<dyn Error>> {
-    let index_string: String = fs::read_to_string(PathBuf::from(models_path).join("index.json"))?;
-    let index_json: Vec<Model> = serde_json::from_str(&index_string)?;
-
+async fn index(build_path: &PathBuf, models_path: &PathBuf, pool: SqlitePool) -> Result<(), Box<dyn Error>> {
     let scad_path = build_path.join("scad/");
     if !scad_path.exists() {
         fs::create_dir(&scad_path)?;
@@ -168,33 +104,41 @@ fn distribute(
         fs::create_dir(&stls_path)?;
     }
 
-    let mut dist_index: Vec<Model> = Vec::new();
-    for model in index_json {
-        fs::metadata(&model.scad_path)?;
+    let flattened_models = parse::traverse_models_dir(models_path, false)?;
+
+    for entry in flattened_models {
+        let info_string = fs::read_to_string(&entry.2)?;
+        let info_json: Value = serde_json::from_str(&info_string)?;
+
+        let model_id: i64 = parse::db_add_model(
+            &pool,
+            info_json["name"].as_str().unwrap(),
+            info_json["date"].as_str().unwrap(),
+            info_json["description"].as_str().unwrap(),
+            info_json["author"].as_str().unwrap(),
+            build_path.join(format!("images/{}.jpg", info_json["name"].as_str().unwrap())).to_str().unwrap(),
+            build_path.join(format!("scad/{}.scad", info_json["name"].as_str().unwrap())).to_str().unwrap(),
+        ).await?;
+
+        fs::metadata(&entry.1)?;
         fs::copy(
-            &model.scad_path,
-            build_path.join(format!("scad/{}.scad", &model.id)),
+            &entry.1,
+            build_path.join(format!("scad/{}.scad", info_json["name"].as_str().unwrap())),
         )?;
-        fs::metadata(&model.image_path)?;
+        fs::metadata(&entry.0)?;
         fs::copy(
-            &model.image_path,
-            build_path.join(format!("images/{}.jpg", &model.id)),
+            &entry.0,
+            build_path.join(format!("images/{}.jpg", info_json["name"].as_str().unwrap())),
         )?;
 
-        dist_index.push(Model {
-            name: model.name,
-            date: model.date,
-            description: model.description,
-            author: model.author,
-            modules: model.modules,
-            image_path: PathBuf::from(format!("images/{}.jpg", &model.id)),
-            scad_path: PathBuf::from(format!("scad/{}.scad", &model.id)),
-            id: model.id,
-        });
+        parse::parse_parts(
+            &pool,
+            &info_json["parts"].as_array().unwrap(),
+            info_json["name"].as_str().unwrap(),
+            model_id,
+            &entry.1
+        ).await?;
     }
-
-    let mut index_file = fs::File::create(build_path.join("index.json")).unwrap();
-    writeln!(index_file, "{}", &serde_json::to_string(&dist_index)?)?;
 
     Ok(())
 }
