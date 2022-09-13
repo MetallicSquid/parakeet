@@ -104,8 +104,11 @@ async fn index(build_path: &PathBuf, models_path: &PathBuf, pool: SqlitePool) ->
         fs::create_dir(&stls_path)?;
     }
 
-    let flattened_models = parse::traverse_models_dir(models_path, false)?;
+    // FIXME: Resetting the database each time is a lazy approach, diffs should probably be used
+    //        The current implementation also stops the ids from resetting to 1, which isn't great
+    parse::db_reset(&pool).await?;
 
+    let flattened_models = parse::traverse_models_dir(models_path, false)?;
     for entry in flattened_models {
         let info_string = fs::read_to_string(&entry.2)?;
         let info_json: Value = serde_json::from_str(&info_string)?;

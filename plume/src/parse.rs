@@ -359,6 +359,20 @@ pub async fn parse_parts(pool: &SqlitePool, parts: &Vec<Value>, model_name: &str
     Ok(())
 }
 
+pub async fn db_reset(pool: &SqlitePool) -> Result<(), Box<dyn Error>> {
+    let mut connection = pool.acquire().await?;
+
+    // let table_list: [&str; 13] = ["Models", "Parts", "Instances", "IntRangeParameters", "FloatRangeParameters", "StringLengthParameters", "BoolParameters", "IntListParameters", "IntListItems", "FloatListParameters", "FloatListItems", "StringListParameters", "StringListItems"];
+    let table_list: [&str; 13] = ["IntListItems", "FloatListItems", "StringListItems", "IntListParameters", "FloatListParameters", "StringListParameters", "BoolParameters", "IntRangeParameters", "FloatRangeParameters", "StringLengthParameters", "Instances", "Parts", "Models"];
+    for table_name in table_list {
+        sqlx::query(&format!("DELETE FROM {}", table_name))
+            .execute(&mut connection)
+            .await?;
+    }
+
+    Ok(())
+}
+
 pub async fn db_add_model(pool: &SqlitePool, name: &str, creation_date: &str, description: &str, author: &str, image_path: &str, scad_path: &str) -> Result<i64, Box<dyn Error>> {
     let mut connection = pool.acquire().await?;
 
