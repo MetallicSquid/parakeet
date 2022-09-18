@@ -31,6 +31,7 @@ pub fn config(models_path: PathBuf, build_path: PathBuf, database_path: PathBuf,
 
     confy::store(
         "parakeet",
+        None,
         ParakeetConfig {
             models_path: canonicalize(models_path)?,
             build_path: canonicalize(build_path)?,
@@ -44,7 +45,7 @@ pub fn config(models_path: PathBuf, build_path: PathBuf, database_path: PathBuf,
 
 // Loads the 'models' and 'build' paths from the config
 pub fn get_paths() -> Result<Vec<PathBuf>, Box<dyn Error>> {
-    let config: ParakeetConfig = confy::load("parakeet")?;
+    let config: ParakeetConfig = confy::load("parakeet", None)?;
 
     Ok(vec![config.models_path, config.build_path, config.database_path])
 }

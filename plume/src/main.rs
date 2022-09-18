@@ -119,8 +119,8 @@ async fn index(build_path: &PathBuf, models_path: &PathBuf, pool: SqlitePool) ->
             info_json["date"].as_str().unwrap(),
             info_json["description"].as_str().unwrap(),
             info_json["author"].as_str().unwrap(),
-            build_path.join(format!("images/{}.jpg", info_json["name"].as_str().unwrap())).to_str().unwrap(),
-            build_path.join(format!("scad/{}.scad", info_json["name"].as_str().unwrap())).to_str().unwrap(),
+            &format!("images/{}.jpg", info_json["name"].as_str().unwrap()),
+            &format!("scad/{}.scad", info_json["name"].as_str().unwrap()),
         ).await?;
 
         fs::metadata(&entry.1)?;
@@ -139,7 +139,7 @@ async fn index(build_path: &PathBuf, models_path: &PathBuf, pool: SqlitePool) ->
             &info_json["parts"].as_array().unwrap(),
             info_json["name"].as_str().unwrap(),
             model_id,
-            &entry.1
+            &build_path.join(format!("scad/{}.scad", info_json["name"].as_str().unwrap())),
         ).await?;
     }
 

@@ -24,11 +24,11 @@ pub fn traverse_models_dir(
             let entry_contents = traverse_models_dir(&entry_path, true)?;
             model_vec.extend(entry_contents);
         } else if entry_path.extension().unwrap() == "jpg" && valid_model {
-            image_path = canonicalize(entry_path)?;
+            image_path = entry_path;
         } else if entry_path.extension().unwrap() == "scad" && valid_model {
-            scad_path = canonicalize(entry_path)?;
+            scad_path = entry_path;
         } else if entry_path.extension().unwrap() == "json" && valid_model {
-            info_path = canonicalize(entry_path)?;
+            info_path = entry_path;
         }
     }
 
@@ -362,7 +362,6 @@ pub async fn parse_parts(pool: &SqlitePool, parts: &Vec<Value>, model_name: &str
 pub async fn db_reset(pool: &SqlitePool) -> Result<(), Box<dyn Error>> {
     let mut connection = pool.acquire().await?;
 
-    // let table_list: [&str; 13] = ["Models", "Parts", "Instances", "IntRangeParameters", "FloatRangeParameters", "StringLengthParameters", "BoolParameters", "IntListParameters", "IntListItems", "FloatListParameters", "FloatListItems", "StringListParameters", "StringListItems"];
     let table_list: [&str; 13] = ["IntListItems", "FloatListItems", "StringListItems", "IntListParameters", "FloatListParameters", "StringListParameters", "BoolParameters", "IntRangeParameters", "FloatRangeParameters", "StringLengthParameters", "Instances", "Parts", "Models"];
     for table_name in table_list {
         sqlx::query(&format!("DELETE FROM {}", table_name))
