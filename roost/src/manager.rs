@@ -4,20 +4,13 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 use fs::read_to_string;
 use std::fs::ReadDir;
-use serde_json::Value;
-use rocket::{Rocket, Build, futures};
-use rocket::fairing::{self, AdHoc};
-use rocket::serde::{Serialize, Deserialize, json::Json};
-use rocket_db_pools::{sqlx, Database, Connection};
-
-use futures::{stream::TryStreamExt, future::TryFutureExt};
-
-type DbResult<T, E = rocket::response::Debug<sqlx::Error>> = std::result::Result<T, E>;
+use rocket::serde::{Serialize, Deserialize};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ParakeetConfig {
     pub models_path: PathBuf,
     pub build_path: PathBuf,
+    pub database_path: PathBuf,
     pub model_limit: i64,
 }
 
@@ -26,29 +19,29 @@ impl ::std::default::Default for ParakeetConfig {
         Self {
             models_path: PathBuf::new(),
             build_path: PathBuf::new(),
+            database_path: PathBuf::new(),
             model_limit: 100
         }
     }
 }
 
 #[derive(Debug)]
-enum ModelError {
+enum InstanceError {
     ScadError(String),
-    NotConfigured(String)
+    NotConfigured(i64, i64)
 }
 
-impl fmt::Display for ModelError {
+impl fmt::Display for InstanceError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            ModelError::ScadError(id) => write!(f, "could not generate .stl model (model id: {})", id),
-            ModelError::NotConfigured(id) => write!(f, "model '{}' has not been fully configured", id)
+            InstanceError::ScadError(path) => write!(f, "could not generate part instance (path: {})", path),
+            InstanceError::NotConfigured(model_id, part_id) => write!(f, "part instance (model id: {}, part id: {}) has not been fully configured", model_id, part_id)
         }
     }
 }
 
-impl Error for ModelError {}
+impl Error for InstanceError {}
 
-#[derive(Debug)]
 pub enum ParamType {
     BoolParam(bool),
     IntParam(i64),
@@ -56,89 +49,45 @@ pub enum ParamType {
     StringParam(String),
 }
 
-#[derive(Debug)]
-pub struct Parameter {
-    pub name: String,
-    pub value: ParamType,
+pub struct STLInstance {
+    pub model_id: i64,
+    pub part_id: i64,
+    pub parameters:Vec<(String, ParamType)>,
+    pub command_string: String
 }
 
-pub struct STLModel {
-    pub id: String,
-    pub config: ParakeetConfig,
-    pub parameters: Vec<Parameter>,
-    pub command_string: String,
-    pub usages: i64
-}
-
-impl STLModel {
-    pub fn parse_parameters(&mut self, parameters_json: &Value, params: &Json<Value>) {
-        for parameter in parameters_json.as_array().unwrap() {
-            let mut value: ParamType;
-            let raw_value = &params.0[parameter["id"].to_string()];
-            if raw_value.is_i64() {
-                value = ParamType::IntParam(raw_value.as_i64().unwrap());
-            } else if raw_value.is_f64() {
-                value = ParamType::FloatParam(raw_value.as_f64().unwrap());
-            } else if raw_value.is_boolean() {
-                value = ParamType::BoolParam(raw_value.as_bool().unwrap());
-            } else {
-                value = ParamType::StringParam(raw_value.as_str().unwrap().to_string());
-            }
-
-            self.parameters.push(Parameter {
-                name: parameter["name"].as_str().unwrap().to_string(),
-                value,
-            })
-        }
-    }
-
-    pub fn gen_command_string(&mut self, module_name: String, scad_path: String) {
+impl STLInstance {
+    pub fn gen_command_string(&mut self, part_name: String, scad_path: String) {
         let mut parameter_string: String = String::new();
         for parameter in &self.parameters {
-            if let ParamType::IntParam(value) = &parameter.value {
-                parameter_string.push_str(&format!("{}={}, ", parameter.name, value))
-            } else if let ParamType::FloatParam(value) = &parameter.value {
-                parameter_string.push_str(&format!("{}={}, ", parameter.name, value))
-            } else if let ParamType::BoolParam(value) = &parameter.value {
-                parameter_string.push_str(&format!("{}={}, ", parameter.name, value))
-            } else if let ParamType::StringParam(value) = &parameter.value {
-                parameter_string.push_str(&format!("{}={}, ", parameter.name, value))
+            if let ParamType::IntParam(value) = &parameter.1 {
+                parameter_string.push_str(&format!("{}={}, ", parameter.0, value))
+            } else if let ParamType::FloatParam(value) = &parameter.1 {
+                parameter_string.push_str(&format!("{}={}, ", parameter.0, value))
+            } else if let ParamType::BoolParam(value) = &parameter.1 {
+                parameter_string.push_str(&format!("{}={}, ", parameter.0, value))
+            } else if let ParamType::StringParam(value) = &parameter.1 {
+                parameter_string.push_str(&format!("{}={}, ", parameter.0, value))
             }
         }
         parameter_string = parameter_string[0..&parameter_string.len() - 2].to_string();
 
-        let module_scad: String = format!("{}({});", module_name, parameter_string);
-        let full_scad_path: PathBuf = Path::join(&self.config.build_path, &scad_path);
+        let part_scad: String = format!("{}({});", part_name, parameter_string);
 
-        self.command_string = format!("use <{}>;{}", full_scad_path.to_str().unwrap(), module_scad);
+        self.command_string = format!("use <{}>;{}", scad_path, part_scad);
     }
 
-    pub async fn create_stl(&self, db: Connection<Db>) -> Result<(), Box<dyn Error>> {
-        if !self.does_stl_exist()? {
-            let stl_path: PathBuf = Path::join(&self.config.build_path, &self.get_identifier());
+    pub fn create_stl(&self, build_path: &PathBuf) -> Result<(), Box<dyn Error>> {
+        let stl_path: PathBuf = Path::join(build_path, &self.get_identifier());
 
-            let command: Output = Command::new("sh")
-                .arg("-c")
-                .arg(format!("echo \"{}\" | openscad -o {} /dev/stdin", &self.command_string, stl_path.to_str().unwrap()))
-                .output()
-                .expect("Could not generate .stl output");
+        let command: Output = Command::new("sh")
+            .arg("-c")
+            .arg(format!("echo \"{}\" | openscad -o {} /dev/stdin", &self.command_string, stl_path.to_str().unwrap()))
+            .output()
+            .expect("Could not generate .stl output");
 
-            let bare = BareModel {
-                id: self.id.to_string(),
-                path: self.get_identifier(),
-                usages: 0
-            };
-
-            let is_enough_space: bool = self.is_enough_space()?;
-            create(db, bare, is_enough_space)
-                .await?;
-
-            if !command.status.success() {
-                Err(ModelError::ScadError(self.id.to_string()))?
-            }
-        } else {
-            increment_usages(db, self.get_identifier())
-                .await?;
+        if !command.status.success() {
+            Err(InstanceError::ScadError(stl_path.to_str().unwrap().to_string()))?
         }
 
         Ok(())
@@ -147,25 +96,25 @@ impl STLModel {
     pub fn get_identifier(&self) -> String {
         let mut value_string = String::new();
         for parameter in &self.parameters {
-            if let ParamType::IntParam(value) = &parameter.value {
+            if let ParamType::IntParam(value) = &parameter.1 {
                 if value_string.is_empty() {
                     value_string.push_str(&value.to_string())
                 } else {
                     value_string.push_str(&format!("-{}", value))
                 }
-            } else if let ParamType::FloatParam(value) = &parameter.value {
+            } else if let ParamType::FloatParam(value) = &parameter.1 {
                 if value_string.is_empty() {
                     value_string.push_str(&value.to_string())
                 } else {
                     value_string.push_str(&format!("-{}", value))
                 }
-            } else if let ParamType::BoolParam(value) = &parameter.value {
+            } else if let ParamType::BoolParam(value) = &parameter.1 {
                 if value_string.is_empty() {
                     value_string.push_str(&value.to_string())
                 } else {
                     value_string.push_str(&format!("-{}", value))
                 }
-            } else if let ParamType::StringParam(value) = &parameter.value {
+            } else if let ParamType::StringParam(value) = &parameter.1 {
                 if value_string.is_empty() {
                     value_string.push_str(&value)
                 } else {
@@ -174,12 +123,12 @@ impl STLModel {
             }
         }
 
-        format!("stls/{}_{}.stl", self.id, value_string)
+        format!("stls/{}-{}_{}.stl", self.model_id, self.part_id, value_string)
     }
 
-    pub fn get_dimensions(&self) -> Result<(f64, f64, f64), Box<dyn Error>> {
-        if self.does_stl_exist()? {
-            let stl_path: PathBuf = Path::join(&self.config.build_path, &self.get_identifier());
+    pub fn get_dimensions(&self, build_path: &PathBuf) -> Result<(f64, f64, f64), Box<dyn Error>> {
+        if self.does_stl_exist(build_path) {
+            let stl_path: PathBuf = Path::join(build_path, &self.get_identifier());
             let stl_contents: String = read_to_string(stl_path)?;
 
             let mut min_x: f64 = 0.0;
@@ -208,132 +157,20 @@ impl STLModel {
         Ok((0.0, 0.0, 0.0))
     }
 
-    pub fn is_enough_space(&self) -> Result<bool, Box<dyn Error>> {
-        let stl_dir: ReadDir = fs::read_dir(Path::join(&self.config.build_path, "stls/"))?;
-        if (stl_dir.count() as i64) < self.config.model_limit {
+    pub fn is_enough_space(&self, build_path: &PathBuf, model_limit: i64) -> Result<bool, Box<dyn Error>> {
+        let stl_dir: ReadDir = fs::read_dir(Path::join(build_path, "stls/"))?;
+        if (stl_dir.count() as i64) < model_limit {
             return Ok(true)
         }
         Ok(false)
     }
 
-    pub fn does_stl_exist(&self) -> Result<bool, Box<dyn Error>> {
-        if self.command_string.is_empty() {
-            Err(ModelError::NotConfigured(self.id.to_string()))?
-        }
-
-        let stl_path: PathBuf = Path::join(&self.config.build_path, &self.get_identifier());
+    pub fn does_stl_exist(&self, build_path: &PathBuf) -> bool {
+        let stl_path: PathBuf = Path::join(build_path, &self.get_identifier());
 
         if stl_path.exists() {
-            return Ok(true)
+            return true
         }
-        Ok(false)
+        false
     }
-}
-
-#[derive(Database)]
-#[database("sqlx")]
-pub struct Db(sqlx::SqlitePool);
-
-#[derive(Debug, Clone, Deserialize, Serialize)]
-struct BareModel {
-    pub id: String,
-    pub path: String,
-    pub usages: i64
-}
-
-async fn create(mut db: Connection<Db>, new_model: BareModel, is_enough_space: bool) -> DbResult<(), Box<dyn Error>> {
-    if !is_enough_space {
-        // FIXME: Pretty inefficient, could do with a fair bit of optimising
-        let models: Vec<(String, i64, i64)> = sqlx::query!("SELECT path, usages, age FROM models")
-            .fetch(&mut *db)
-            .map_ok(|record| {
-                if let Some(age) = record.age {
-                    return (String::from(record.path), record.usages, age)
-                }
-                (String::from(record.path), record.usages, 0)
-            })
-            .try_collect::<Vec<(String, i64, i64)>>()
-            .await?;
-
-        let mut min_usages: i64 = i64::MAX;
-        let mut least_valuable_models: Vec<(String, i64, i64)> = Vec::new();
-
-        for model in &models {
-            if model.1 < min_usages {
-                min_usages = model.1;
-            }
-        }
-
-        for model in models {
-            if model.1 == min_usages {
-                least_valuable_models.push(model);
-            }
-        }
-
-        let mut least_valuable_model: &(String, i64, i64) = &least_valuable_models[0];
-        for model in &least_valuable_models {
-            if model.2 < least_valuable_model.2 {
-                least_valuable_model = &model;
-            }
-        }
-
-        sqlx::query!("DELETE FROM models WHERE path = ?", least_valuable_model.0)
-            .execute(&mut *db)
-            .await?;
-    }
-
-    sqlx::query!("INSERT INTO models (id, path, usages) VALUES (?, ?, ?)", new_model.id, new_model.path, new_model.usages)
-        .execute(&mut *db)
-        .await?;
-
-    Ok(())
-}
-
-async fn get_info(mut db: Connection<Db>, path: String) -> DbResult<(i64, i64), Box<dyn Error>> {
-    let info: (i64, i64) = sqlx::query!("SELECT usages, age FROM models WHERE path = ?", path)
-        .fetch_one(&mut *db)
-        .map_ok(|record| {
-            if let Some(age) = record.age {
-                return (record.usages, age)
-            }
-            (record.usages, 0)
-        })
-        .await?;
-
-    Ok(info)
-}
-
-async fn increment_usages(mut db: Connection<Db>, path: String) -> DbResult<(), Box<dyn Error>> {
-    let usages: i64 = sqlx::query!("SELECT usages FROM models WHERE path = ?", path)
-        .fetch_one(&mut *db)
-        .map_ok(|record| record.usages)
-        .await?
-        + 1;
-
-    sqlx::query!("UPDATE models SET usages = ? WHERE path = ?", usages, path)
-        .execute(&mut *db)
-        .await?;
-
-    Ok(())
-}
-
-async fn run_migrations(rocket: Rocket<Build>) -> fairing::Result {
-    match Db::fetch(&rocket) {
-        Some(db) => match sqlx::migrate!("database/migrations").run(&**db).await {
-            Ok(_) => Ok(rocket),
-            Err(e) => {
-                // FIXME: Should throw an actual error message
-                println!("Failed to initialise SQLx database: {}", e);
-                Err(rocket)
-            }
-        },
-        None => Err(rocket),
-    }
-}
-
-pub fn stage_db() -> AdHoc {
-    AdHoc::on_ignite("SQLx Stage", |rocket| async {
-        rocket.attach(Db::init())
-            .attach(AdHoc::try_on_ignite("SQLx Migrations", run_migrations))
-    })
 }

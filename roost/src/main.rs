@@ -1,26 +1,26 @@
 mod manager;
+mod database;
 
 #[macro_use]
 extern crate rocket;
 
 use rocket::fs::FileServer;
-use rocket::serde::{Serialize, Deserialize, json::Json};
+use rocket::serde::{Serialize, json::Json};
 use serde_json::Value;
 use std::fs;
-use std::path::{Path, PathBuf};
-use std::process::{Command, Output};
-use rocket::{Request, State};
-use rocket_db_pools::{sqlx, Database, Connection};
+use std::fs::canonicalize;
+use std::path::PathBuf;
+use rocket::State;
+use rocket_db_pools::{Database, Connection};
 
 #[get("/models")]
-fn get_index() -> Json<Value> {
-    let config: manager::ParakeetConfig = confy::load("parakeet").expect("Could not load config file");
+async fn get_models(db: &database::Db) -> Json<Vec<database::DisplayModel>> {
+    Json(database::get_display_models(db).await.expect("Could not load models from database"))
+}
 
-    let index_path: PathBuf = Path::join(&config.build_path, "index.json");
-    let index_file: String = fs::read_to_string(index_path).expect("Could not open index file");
-    let index_json: Value = serde_json::from_str(&index_file).expect("Could not read index file");
-
-    return Json::from(index_json)
+#[get("/models/<id>")]
+async fn get_model(db: &database::Db, id: i64) -> Json<database::Model> {
+    Json(database::get_model(db, id).await.expect(&format!("Could not load model {} from database", id)))
 }
 
 #[derive(Serialize)]
@@ -29,50 +29,99 @@ struct GenerateInfo {
     dimensions: (f64, f64, f64)
 }
 
-// TODO: Support multiple modules
-#[post("/generate/<id>", data = "<params>")]
-async fn generate_model(db: Connection<manager::Db>, id: &str, params: Json<Value>) -> Json<GenerateInfo> {
-    let config: manager::ParakeetConfig = confy::load("parakeet").expect("Could not load config file");
+#[post("/generate/<model_id>/<part_id>", data = "<params>")]
+async fn generate_part(db: &database::Db, model_id: i64, part_id: i64, params: Json<Value>, state: &State<manager::ParakeetConfig>) -> Json<GenerateInfo> {
+    let model: database::Model = database::get_model(db, model_id).await.expect(&format!("Could not load model {} from database", model_id));
+    for part in model.parts {
+       if part.part_id == part_id {
+           let parameters: Vec<(String, manager::ParamType)> = part.parameters.iter()
+               .map(|parameter: &database::Parameter | {
+                   let entry: (String, manager::ParamType);
+                   match parameter {
+                       database::Parameter::IntRange(p) => entry = (p.name.to_string(), manager::ParamType::IntParam(params.0[&p.parameter_id.to_string()].as_i64().unwrap())),
+                       database::Parameter::IntList(p) => entry = (p.name.to_string(), manager::ParamType::IntParam(params.0[&p.parameter_id.to_string()].as_i64().unwrap())),
+                       database::Parameter::FloatRange(p) => entry = (p.name.to_string(), manager::ParamType::FloatParam(params.0[&p.parameter_id.to_string()].as_f64().unwrap())),
+                       database::Parameter::FloatList(p) => entry = (p.name.to_string(), manager::ParamType::FloatParam(params.0[&p.parameter_id.to_string()].as_f64().unwrap())),
+                       database::Parameter::StringLength(p) => entry = (p.name.to_string(), manager::ParamType::StringParam(params.0[&p.parameter_id.to_string()].as_str().unwrap().to_string())),
+                       database::Parameter::StringList(p) => entry = (p.name.to_string(), manager::ParamType::StringParam(params.0[&p.parameter_id.to_string()].as_str().unwrap().to_string())),
+                       database::Parameter::Bool(p) => entry = (p.name.to_string(), manager::ParamType::BoolParam(params.0[&p.parameter_id.to_string()].as_bool().unwrap())),
+                   }
+                   entry
+               }).collect();
 
-    let index_path: PathBuf = Path::join(&config.build_path, "index.json");
-    let index_file: String = fs::read_to_string(index_path).expect("Could not open index file");
-    let index_json: Value = serde_json::from_str(&index_file).expect("Could not read index file");
+           let mut stl_instance: manager::STLInstance = manager::STLInstance {
+               model_id,
+               part_id,
+               parameters,
+               command_string: String::new()
+           };
 
-    // FIXME: Will have to be changed when multiple models are implemented
-    let module_name = index_json[0]["modules"][0]["name"].as_str().unwrap();
-    let scad_path = index_json[0]["scad_path"].as_str().unwrap();
+           stl_instance.gen_command_string(part.name, model.scad_path);
+           let full_path: PathBuf = canonicalize(stl_instance.get_identifier()).expect("Could not resolve .stl file path");
 
-    let mut model: manager::STLModel = manager::STLModel {
-        id: index_json[0]["id"].as_str().unwrap().to_string(),
-        config,
-        parameters: vec![],
-        command_string: String::new(),
-        usages: 1
-    };
+           let exists: bool = stl_instance.does_stl_exist(&state.build_path);
+           let enough_space: bool = stl_instance.is_enough_space(&state.build_path, state.model_limit).expect(&format!("Could not read 'stls/' directory in {}", &state.build_path.to_str().unwrap()));
 
-    model.parse_parameters(&index_json[0]["modules"][0]["parameters"], &params);
-    model.gen_command_string(module_name.to_string(), scad_path.to_string());
-    model.create_stl(db)
-        .await
-        .expect("Could not generate the .stl file");
+           if !exists && enough_space {
+               stl_instance.create_stl(&state.build_path)
+                   .expect("Could not create part instance locally");
+               database::create_instance(db, database::Instance {
+                   part_id,
+                   path: full_path.to_str().unwrap().to_string(),
+                   usage: None,
+                   age: None
+               })
+                   .await
+                   .expect(&format!("Could not create part instance with path {} in database", full_path.to_str().unwrap().to_string()));
+           } else if !exists && !enough_space {
+               let least_valuable: database::Instance = database::find_least_valuable_instance(db).await
+                   .expect("Could not find 'least valuable' instance in database");
+               fs::remove_file(&least_valuable.path)
+                   .expect(&format!("Could not delete file at {}", &least_valuable.path));
+               database::remove_instance(db, &least_valuable.path).await
+                   .expect(&format!("Could not remove instance with path {} from database", &least_valuable.path));
+               database::create_instance(db, database::Instance {
+                   part_id,
+                   path: full_path.to_str().unwrap().to_string(),
+                   usage: None,
+                   age: None
+               })
+                   .await
+                   .expect(&format!("Could not create part instance with path {} in database", full_path.to_str().unwrap().to_string()));
+           } else {
+               database::increment_instance_usage(db, full_path.to_str().unwrap().to_string()).await
+                   .expect(&format!("Could not read part instance with path {} in database", full_path.to_str().unwrap().to_string()))
+           }
+
+           return Json(GenerateInfo {
+               filename: stl_instance.get_identifier(),
+               dimensions: stl_instance.get_dimensions(&state.build_path).expect("Could not determine dimensions of the model")
+           })
+       }
+    }
 
     Json(GenerateInfo {
-        filename: model.get_identifier(),
-        dimensions: model.get_dimensions().expect("Could not determine dimensions of the model")
+        filename: String::from(""),
+        dimensions: (0.0, 0.0, 0.0)
     })
 }
 
 // FIXME: Shouldn't really have to resort to this hack
-#[get["/<id>"]]
-fn pass(id: &str) {}
+#[get["/<_id>"]]
+fn pass(_id: &str) {}
 
-#[launch]
-fn rocket() -> _ {
-    let config: manager::ParakeetConfig = confy::load("parakeet").expect("Could not load config file");
+#[rocket::main]
+async fn main() -> Result<(), rocket::Error> {
+    let config: manager::ParakeetConfig = confy::load("parakeet", None).expect("Could not load config file");
 
-    rocket::build()
+    let _rocket = rocket::build()
         .mount("/", routes![pass])
-        .mount("/", FileServer::from(config.build_path))
-        .mount("/api", routes![generate_model, get_index])
-        .attach(manager::stage_db())
+        .mount("/", FileServer::from(&config.build_path))
+        .mount("/api", routes![get_models, get_model, generate_part])
+        .attach(database::Db::init())
+        .manage(config)
+        .launch()
+        .await?;
+
+    Ok(())
 }
