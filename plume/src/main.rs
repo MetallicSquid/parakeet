@@ -109,12 +109,14 @@ async fn index(build_path: &PathBuf, models_path: &PathBuf, pool: SqlitePool) ->
     parse::db_reset(&pool).await?;
 
     let flattened_models = parse::traverse_models_dir(models_path, false)?;
+    let mut model_id: i64 = 0;
     for entry in flattened_models {
         let info_string = fs::read_to_string(&entry.2)?;
         let info_json: Value = serde_json::from_str(&info_string)?;
 
-        let model_id: i64 = parse::db_add_model(
+        parse::db_add_model(
             &pool,
+            model_id,
             info_json["name"].as_str().unwrap(),
             info_json["date"].as_str().unwrap(),
             info_json["description"].as_str().unwrap(),
@@ -141,6 +143,7 @@ async fn index(build_path: &PathBuf, models_path: &PathBuf, pool: SqlitePool) ->
             model_id,
             &build_path.join(format!("scad/{}.scad", info_json["name"].as_str().unwrap())),
         ).await?;
+        model_id += 1;
     }
 
     Ok(())

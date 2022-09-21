@@ -1,5 +1,5 @@
 CREATE TABLE Models (
-    model_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    model_id INTEGER NOT NULL PRIMARY KEY,
     name VARCHAR NOT NULL,
     creation_date VARCHAR NOT NULL,
     description VARCHAR NOT NULL,
@@ -9,7 +9,7 @@ CREATE TABLE Models (
 );
 
 CREATE TABLE Parts (
-    part_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    part_id INTEGER NOT NULL PRIMARY KEY,
     name VARCHAR NOT NULL,
     model_id INTEGER NOT NULL,
     FOREIGN KEY (model_id)
@@ -26,7 +26,7 @@ CREATE TABLE Instances (
 );
 
 CREATE TABLE IntRangeParameters (
-    parameter_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    parameter_id INTEGER NOT NULL PRIMARY KEY,
     name VARCHAR NOT NULL,
     default_value INTEGER NOT NULL,
     lower INTEGER NOT NULL,
@@ -37,7 +37,7 @@ CREATE TABLE IntRangeParameters (
 );
 
 CREATE TABLE FloatRangeParameters (
-    parameter_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    parameter_id INTEGER NOT NULL PRIMARY KEY,
     name VARCHAR NOT NULL,
     default_value REAL NOT NULL,
     lower REAL NOT NULL,
@@ -48,7 +48,7 @@ CREATE TABLE FloatRangeParameters (
 );
 
 CREATE TABLE StringLengthParameters (
-    parameter_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    parameter_id INTEGER NOT NULL PRIMARY KEY,
     name VARCHAR NOT NULL,
     default_value VARCHAR NOT NULL,
     length INTEGER NOT NULL,
@@ -58,7 +58,7 @@ CREATE TABLE StringLengthParameters (
 );
 
 CREATE TABLE BoolParameters (
-    parameter_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    parameter_id INTEGER NOT NULL PRIMARY KEY,
     name VARCHAR NOT NULL,
     default_value BOOLEAN NOT NULL,
     part_id INTEGER NOT NULL,
@@ -67,7 +67,7 @@ CREATE TABLE BoolParameters (
 );
 
 CREATE TABLE IntListParameters (
-    parameter_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    parameter_id INTEGER NOT NULL PRIMARY KEY,
     name VARCHAR NOT NULL,
     default_value INTEGER NOT NULL,
     part_id INTEGER NOT NULL,
@@ -84,7 +84,7 @@ CREATE TABLE IntListItems (
 );
 
 CREATE TABLE FloatListParameters (
-    parameter_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    parameter_id INTEGER NOT NULL PRIMARY KEY,
     name VARCHAR NOT NULL,
     default_value REAL NOT NULL,
     part_id INTEGER NOT NULL,
@@ -101,7 +101,7 @@ CREATE TABLE FloatListItems (
 );
 
 CREATE TABLE StringListParameters (
-    parameter_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    parameter_id INTEGER NOT NULL PRIMARY KEY,
     name VARCHAR NOT NULL,
     default_value VARCHAR NOT NULL,
     part_id INTEGER NOT NULL,

@@ -98,6 +98,7 @@ pub async fn parse_parameters(
     part_id: i64,
     model_name: &str
 ) -> Result<(), Box<dyn Error>> {
+    let mut parameter_id: i64 = 0;
     for parameter in parameters {
         if parameter["default"].is_boolean() {
             // Bool parameter
@@ -108,10 +109,12 @@ pub async fn parse_parameters(
             {
                 db_add_bool_parameter(
                     pool,
+                    parameter_id,
                     parameter["name"].as_str().unwrap(),
                     parameter["default"].as_bool().unwrap(),
                     part_id
                 ).await?;
+                parameter_id += 1;
             } else {
                 Err(ParamError::InvalidFormatting(
                     parameter["name"].as_str().unwrap().to_string(),
@@ -128,22 +131,26 @@ pub async fn parse_parameters(
                 if parameter["lower"].as_i64() < parameter["upper"].as_i64() {
                     db_add_int_range_parameter(
                         pool,
+                        parameter_id,
                         parameter["name"].as_str().unwrap(),
                         parameter["default"].as_i64().unwrap(),
                         parameter["lower"].as_i64().unwrap(),
                         parameter["upper"].as_i64().unwrap(),
                         part_id
                     ).await?;
+                    parameter_id += 1;
                 } else if parameter["lower"].as_i64() > parameter["upper"].as_i64() {
                     println!("Warning: 'lower' and 'upper' fields for the '{}' parameter in the '{}' model have been swapped", parameter["name"], model_name);
                     db_add_int_range_parameter(
                         pool,
+                        parameter_id,
                         parameter["name"].as_str().unwrap(),
                         parameter["default"].as_i64().unwrap(),
                         parameter["upper"].as_i64().unwrap(),
                         parameter["lower"].as_i64().unwrap(),
                         part_id
                     ).await?;
+                    parameter_id += 1;
                 } else {
                     Err(RestrictionError::InvalidRange(
                         parameter["name"].as_str().unwrap().to_string(),
@@ -155,8 +162,9 @@ pub async fn parse_parameters(
                 && parameter["length"].is_null()
             {
                 // List restricted
-                let parameter_id: i64 = db_add_int_list_parameter(
+                db_add_int_list_parameter(
                     pool,
+                    parameter_id,
                     parameter["name"].as_str().unwrap(),
                     parameter["default"].as_i64().unwrap(),
                     part_id
@@ -181,6 +189,7 @@ pub async fn parse_parameters(
                         ))?;
                     }
                 }
+                parameter_id += 1;
             } else {
                 Err(ParamError::InvalidFormatting(
                     parameter["name"].as_str().unwrap().to_string(),
@@ -197,22 +206,26 @@ pub async fn parse_parameters(
                 if parameter["lower"].as_f64() < parameter["upper"].as_f64() {
                     db_add_float_range_parameter(
                         pool,
+                        parameter_id,
                         parameter["name"].as_str().unwrap(),
                         parameter["default"].as_f64().unwrap(),
                         parameter["lower"].as_f64().unwrap(),
                         parameter["upper"].as_f64().unwrap(),
                         part_id
                     ).await?;
+                    parameter_id += 1;
                 } else if parameter["lower"].as_f64() > parameter["upper"].as_f64() {
                     println!("Warning: 'lower' and 'upper' fields for the '{}' parameter in the '{}' model have been swapped", parameter["name"], model_name);
                     db_add_float_range_parameter(
                         pool,
+                        parameter_id,
                         parameter["name"].as_str().unwrap(),
                         parameter["default"].as_f64().unwrap(),
                         parameter["upper"].as_f64().unwrap(),
                         parameter["lower"].as_f64().unwrap(),
                         part_id
                     ).await?;
+                    parameter_id += 1;
                 } else {
                     Err(RestrictionError::InvalidRange(
                         parameter["name"].as_str().unwrap().to_string(),
@@ -224,8 +237,9 @@ pub async fn parse_parameters(
                 && parameter["length"].is_null()
             {
                 // List restricted
-                let parameter_id: i64 = db_add_float_list_parameter(
+                db_add_float_list_parameter(
                     pool,
+                    parameter_id,
                     parameter["name"].as_str().unwrap(),
                     parameter["default"].as_f64().unwrap(),
                     part_id
@@ -250,6 +264,7 @@ pub async fn parse_parameters(
                         ))?;
                     }
                 }
+                parameter_id += 1;
             } else {
                 Err(ParamError::InvalidFormatting(
                     parameter["name"].as_str().unwrap().to_string(),
@@ -266,11 +281,13 @@ pub async fn parse_parameters(
                 if parameter["length"].as_i64().unwrap() > 0 {
                     db_add_string_length_parameter(
                         pool,
+                        parameter_id,
                         parameter["name"].as_str().unwrap(),
                         parameter["default"].as_str().unwrap(),
                         parameter["length"].as_i64().unwrap(),
                         part_id
                     ).await?;
+                    parameter_id += 1;
                 } else {
                     Err(RestrictionError::InvalidRange(
                         parameter["name"].as_str().unwrap().to_string(),
@@ -282,8 +299,9 @@ pub async fn parse_parameters(
                 && parameter["length"].is_null()
             {
                 // List restricted
-                let parameter_id: i64 = db_add_string_list_parameter(
+                db_add_string_list_parameter(
                     pool,
+                    parameter_id,
                     parameter["name"].as_str().unwrap(),
                     parameter["default"].as_str().unwrap(),
                     part_id
@@ -308,6 +326,7 @@ pub async fn parse_parameters(
                         ))?;
                     }
                 }
+                parameter_id += 1;
             } else {
                 Err(ParamError::InvalidFormatting(
                     parameter["name"].as_str().unwrap().to_string(),
@@ -344,14 +363,17 @@ impl Error for PartError {}
 
 // Parse the json modules and the parameters that they contain ensuring existence and restrictions
 pub async fn parse_parts(pool: &SqlitePool, parts: &Vec<Value>, model_name: &str, model_id: i64, _scad_path: &PathBuf) -> Result<(), Box<dyn Error>> {
+    let mut part_id: i64 = 0;
     for part in parts {
-        let part_id: i64 = db_add_part(
+        db_add_part(
             pool,
+            part_id,
             part["name"].as_str().unwrap(),
             model_id
         ).await?;
 
         parse_parameters(pool, &part["parameters"].as_array().unwrap(), part_id, model_name).await?;
+        part_id += 1;
     }
 
     // validate_scad(&parsed_modules, scad_path)?;
@@ -372,10 +394,11 @@ pub async fn db_reset(pool: &SqlitePool) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-pub async fn db_add_model(pool: &SqlitePool, name: &str, creation_date: &str, description: &str, author: &str, image_path: &str, scad_path: &str) -> Result<i64, Box<dyn Error>> {
+pub async fn db_add_model(pool: &SqlitePool, model_id: i64, name: &str, creation_date: &str, description: &str, author: &str, image_path: &str, scad_path: &str) -> Result<(), Box<dyn Error>> {
     let mut connection = pool.acquire().await?;
 
-    let model_id: i64 = sqlx::query!("INSERT INTO Models (name, creation_date, description, author, image_path, scad_path) VALUES (?, ?, ?, ?, ?, ?)",
+    sqlx::query!("INSERT INTO Models (model_id, name, creation_date, description, author, image_path, scad_path) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        model_id,
         name,
         creation_date,
         description,
@@ -384,30 +407,30 @@ pub async fn db_add_model(pool: &SqlitePool, name: &str, creation_date: &str, de
         scad_path
     )
         .execute(&mut connection)
-        .await?
-        .last_insert_rowid();
+        .await?;
 
-    Ok(model_id)
+    Ok(())
 }
 
-async fn db_add_part(pool: &SqlitePool, name: &str, model_id: i64) -> Result<i64, Box<dyn Error>> {
+async fn db_add_part(pool: &SqlitePool, part_id: i64, name: &str, model_id: i64) -> Result<(), Box<dyn Error>> {
     let mut connection = pool.acquire().await?;
 
-    let part_id: i64 = sqlx::query!("INSERT INTO Parts (name, model_id) VALUES (?, ?)",
+    sqlx::query!("INSERT INTO Parts (part_id, name, model_id) VALUES (?, ?, ?)",
+        part_id,
         name,
         model_id
     )
         .execute(&mut connection)
-        .await?
-        .last_insert_rowid();
+        .await?;
 
-    Ok(part_id)
+    Ok(())
 }
 
-async fn db_add_int_range_parameter(pool: &SqlitePool, name: &str, default_value: i64, lower: i64, upper: i64, part_id: i64) -> Result<(), Box<dyn Error>> {
+async fn db_add_int_range_parameter(pool: &SqlitePool, parameter_id: i64, name: &str, default_value: i64, lower: i64, upper: i64, part_id: i64) -> Result<(), Box<dyn Error>> {
     let mut connection = pool.acquire().await?;
 
-    sqlx::query!("INSERT INTO IntRangeParameters (name, default_value, lower, upper, part_id) VALUES (?, ?, ?, ?, ?)",
+    sqlx::query!("INSERT INTO IntRangeParameters (parameter_id, name, default_value, lower, upper, part_id) VALUES (?, ?, ?, ?, ?, ?)",
+        parameter_id,
         name,
         default_value,
         lower,
@@ -420,10 +443,11 @@ async fn db_add_int_range_parameter(pool: &SqlitePool, name: &str, default_value
     Ok(())
 }
 
-async fn db_add_float_range_parameter(pool: &SqlitePool, name: &str, default_value: f64, lower: f64, upper: f64, part_id: i64) -> Result<(), Box<dyn Error>> {
+async fn db_add_float_range_parameter(pool: &SqlitePool, parameter_id: i64, name: &str, default_value: f64, lower: f64, upper: f64, part_id: i64) -> Result<(), Box<dyn Error>> {
     let mut connection = pool.acquire().await?;
 
-    sqlx::query!("INSERT INTO FloatRangeParameters (name, default_value, lower, upper, part_id) VALUES (?, ?, ?, ?, ?)",
+    sqlx::query!("INSERT INTO FloatRangeParameters (parameter_id, name, default_value, lower, upper, part_id) VALUES (?, ?, ?, ?, ?, ?)",
+        parameter_id,
         name,
         default_value,
         lower,
@@ -436,10 +460,11 @@ async fn db_add_float_range_parameter(pool: &SqlitePool, name: &str, default_val
     Ok(())
 }
 
-async fn db_add_string_length_parameter(pool: &SqlitePool, name: &str, default_value: &str, length: i64, part_id: i64) -> Result<(), Box<dyn Error>> {
+async fn db_add_string_length_parameter(pool: &SqlitePool, parameter_id: i64, name: &str, default_value: &str, length: i64, part_id: i64) -> Result<(), Box<dyn Error>> {
     let mut connection = pool.acquire().await?;
 
-    sqlx::query!("INSERT INTO StringLengthParameters (name, default_value, length, part_id) VALUES (?, ?, ?, ?)",
+    sqlx::query!("INSERT INTO StringLengthParameters (parameter_id, name, default_value, length, part_id) VALUES (?, ?, ?, ?, ?)",
+        parameter_id,
         name,
         default_value,
         length,
@@ -451,10 +476,11 @@ async fn db_add_string_length_parameter(pool: &SqlitePool, name: &str, default_v
     Ok(())
 }
 
-async fn db_add_bool_parameter(pool: &SqlitePool, name: &str, default_value: bool, part_id: i64) -> Result<(), Box<dyn Error>> {
+async fn db_add_bool_parameter(pool: &SqlitePool, parameter_id: i64, name: &str, default_value: bool, part_id: i64) -> Result<(), Box<dyn Error>> {
     let mut connection = pool.acquire().await?;
 
-    sqlx::query!("INSERT INTO BoolParameters (name, default_value, part_id) VALUES (?, ?, ?)",
+    sqlx::query!("INSERT INTO BoolParameters (parameter_id, name, default_value, part_id) VALUES (?, ?, ?, ?)",
+        parameter_id,
         name,
         default_value,
         part_id
@@ -465,19 +491,19 @@ async fn db_add_bool_parameter(pool: &SqlitePool, name: &str, default_value: boo
     Ok(())
 }
 
-async fn db_add_int_list_parameter(pool: &SqlitePool, name: &str, default_value: i64, part_id: i64) -> Result<i64, Box<dyn Error>> {
+async fn db_add_int_list_parameter(pool: &SqlitePool, parameter_id: i64, name: &str, default_value: i64, part_id: i64) -> Result<(), Box<dyn Error>> {
     let mut connection = pool.acquire().await?;
 
-    let parameter_id: i64 = sqlx::query!("INSERT INTO IntListParameters (name, default_value, part_id) VALUES (?, ?, ?)",
+    sqlx::query!("INSERT INTO IntListParameters (parameter_id, name, default_value, part_id) VALUES (?, ?, ?, ?)",
+        parameter_id,
         name,
         default_value,
         part_id
     )
         .execute(&mut connection)
-        .await?
-        .last_insert_rowid();
+        .await?;
 
-    Ok(parameter_id)
+    Ok(())
 }
 
 async fn db_add_int_list_item(pool: &SqlitePool, value: i64, parameter_id: i64) -> Result<(), Box<dyn Error>> {
@@ -493,19 +519,19 @@ async fn db_add_int_list_item(pool: &SqlitePool, value: i64, parameter_id: i64) 
     Ok(())
 }
 
-async fn db_add_float_list_parameter(pool: &SqlitePool, name: &str, default_value: f64, part_id: i64) -> Result<i64, Box<dyn Error>> {
+async fn db_add_float_list_parameter(pool: &SqlitePool, parameter_id: i64, name: &str, default_value: f64, part_id: i64) -> Result<(), Box<dyn Error>> {
     let mut connection = pool.acquire().await?;
 
-    let parameter_id: i64 = sqlx::query!("INSERT INTO FloatListParameters (name, default_value, part_id) VALUES (?, ?, ?)",
+    sqlx::query!("INSERT INTO FloatListParameters (parameter_id, name, default_value, part_id) VALUES (?, ?, ?, ?)",
+        parameter_id,
         name,
         default_value,
         part_id
     )
         .execute(&mut connection)
-        .await?
-        .last_insert_rowid();
+        .await?;
 
-    Ok(parameter_id)
+    Ok(())
 }
 
 async fn db_add_float_list_item(pool: &SqlitePool, value: f64, parameter_id: i64) -> Result<(), Box<dyn Error>> {
@@ -521,19 +547,19 @@ async fn db_add_float_list_item(pool: &SqlitePool, value: f64, parameter_id: i64
     Ok(())
 }
 
-async fn db_add_string_list_parameter(pool: &SqlitePool, name: &str, default_value: &str, part_id: i64) -> Result<i64, Box<dyn Error>> {
+async fn db_add_string_list_parameter(pool: &SqlitePool, parameter_id: i64, name: &str, default_value: &str, part_id: i64) -> Result<(), Box<dyn Error>> {
     let mut connection = pool.acquire().await?;
 
-    let parameter_id: i64 = sqlx::query!("INSERT INTO FloatListParameters (name, default_value, part_id) VALUES (?, ?, ?)",
+    sqlx::query!("INSERT INTO FloatListParameters (parameter_id, name, default_value, part_id) VALUES (?, ?, ?, ?)",
+        parameter_id,
         name,
         default_value,
         part_id
     )
         .execute(&mut connection)
-        .await?
-        .last_insert_rowid();
+        .await?;
 
-    Ok(parameter_id)
+    Ok(())
 }
 
 async fn db_add_string_list_item(pool: &SqlitePool, value: &str, parameter_id: i64) -> Result<(), Box<dyn Error>> {
