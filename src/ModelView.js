@@ -31,25 +31,15 @@ import {
 import {Canvas} from "@react-three/fiber";
 import {AccessTime, Straighten} from "@mui/icons-material";
 
-function GatherModelInfo(models) {
-    const { id } = useParams();
-    for (let i = 0; i < models.length; i++) {
-        if (models[i].id === id) {
-            return models[i]
-        }
-    }
-    return {}
-}
-
 function ParamView(props) {
     return (
         <>
-            {props.modules.map((module) => {
+            {props.parts.map((part) => {
                 return (
                     <div style={{width: "100%"}}>
-                        <Typography variant="h6" className="Module-subtitle"><b>{module.name}</b></Typography>
+                        <Typography variant="h6" className="Module-subtitle"><b>{part.name}</b></Typography>
                         <div style={{width: "100%"}}>
-                            {module.parameters.map((parameter) => {
+                            {part.parameters.map((parameter, index) => {
                                 return (
                                     RenderParam(parameter, props.formValues, props.setFormValues, props.onStlChange)
                                 );
@@ -62,8 +52,8 @@ function ParamView(props) {
     )
 }
 
-function genStl(id, formValues, setStl, setDimensions) {
-    const url = '/api/generate/' + id;
+function genStl(model_id, part_id, formValues, setStl, setDimensions) {
+    const url = '/api/generate/' + model_id + '/' + part_id;
     const request = new Request(url, {
         method: 'POST',
         body: JSON.stringify(formValues),
@@ -81,19 +71,24 @@ function genStl(id, formValues, setStl, setDimensions) {
 }
 
 function ModelView(props) {
-    const model = GatherModelInfo(props.models);
-
+    console.log(props.model)
     let default_values = {};
-    for (let module of model.modules) {
-        for (let i = 0; i < module.parameters.length; i++) {
-            if (module.parameters[i].default.IntParam) {
-                default_values[i] = module.parameters[i].default.IntParam;
-            } else if (module.parameters[i].default.FloatParam) {
-                default_values[i] = module.parameters[i].default.FloatParam;
-            } else if (module.parameters[i].default.StringParam) {
-                default_values[i] = module.parameters[i].default.StringParam;
+    for (let part of props.model.parts) {
+        for (let i = 0; i < part.parameters.length; i++) {
+            if (part.parameters[i].IntRange) {
+                default_values[i] = part.parameters[i].IntRange.default_value;
+            } else if (part.parameters[i].FloatRange) {
+                default_values[i] = part.parameters[i].FloatRange.default_value;
+            } else if (part.parameters[i].StringLength) {
+                default_values[i] = part.parameters[i].StringLength.default_value;
+            } else if (part.parameters[i].Bool) {
+                default_values[i] = part.parameters[i].Bool.default_value;
+            } else if (part.parameters[i].IntList) {
+                default_values[i] = part.parameters[i].IntList.default_value;
+            } else if (part.parameters[i].FloatList) {
+                default_values[i] = part.parameters[i].FloatList.default_value;
             } else {
-                default_values[i] = module.parameters[i].default.BoolParam;
+                default_values[i] = part.parameters[i].StringList.default_value;
             }
         }
     }
@@ -113,7 +108,7 @@ function ModelView(props) {
     const [updateTime, setUpdateTime] = useState((new Date()));
 
     useEffect(() => {
-        genStl(model.id, committedValues, setStl, setDimensions);
+        genStl(props.model.model_id, props.model.parts[0].part_id, committedValues, setStl, setDimensions);
         setUpdateTime((new Date()));
     }, [committedValues])
 
@@ -166,18 +161,18 @@ function ModelView(props) {
                         <List>
                             <ListItem>
                                 <div>
-                                    <Typography variant="h3" fontWeight="bold">{model.name}</Typography>
-                                    <Typography variant="h5">by {model.author}</Typography>
+                                    <Typography variant="h3" fontWeight="bold">{props.model.name}</Typography>
+                                    <Typography variant="h5">by {props.model.author}</Typography>
                                 </div>
                             </ListItem>
                             <Divider />
                             <ListItem>
-                                <Typography className="Description-text">{model.description}</Typography>
+                                <Typography className="Description-text">{props.model.description}</Typography>
                             </ListItem>
                             <Divider />
                             <ListItem>
                                 <ParamView
-                                    modules={model.modules}
+                                    parts={props.model.parts}
                                     formValues={formValues}
                                     setFormValues={setFormValues}
                                     onStlChange={onStlChange}

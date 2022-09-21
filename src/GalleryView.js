@@ -10,7 +10,7 @@ import {
     Typography,
     Grid
 } from '@mui/material';
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router-dom';
 
 function ModelCard(props) {
     return (
@@ -48,9 +48,9 @@ function Gallery(props) {
                     {props.models.map(model => (
                         <Grid item>
                             <ModelCard
-                                id={model.id}
+                                id={model.model_id}
                                 name={model.name}
-                                date={model.date}
+                                date={model.creation_date}
                                 image_path={model.image_path}
                                 description={model.description}
                             />

@@ -13,10 +13,10 @@ import {
 // A slider, input combination that represents the IntRangeRestriction
 export function IntRange(parameter, formValues, setFormValues, onStlChange) {
     const name = parameter.name;
-    const default_value = parameter.default.IntParam;
-    const minimum = parameter.restriction.IntRangeRestriction.lower;
-    const maximum = parameter.restriction.IntRangeRestriction.upper;
-    const index = parameter.id;
+    const default_value = parameter.default_value;
+    const minimum = parameter.lower;
+    const maximum = parameter.upper;
+    const index = parameter.parameter_id;
 
     let value = formValues[index];
 
@@ -112,10 +112,10 @@ export function IntRange(parameter, formValues, setFormValues, onStlChange) {
 // A slider, input combination that represents the FloatRangeRestriction
 export function FloatRange(parameter, formValues, setFormValues, onStlChange) {
     const name = parameter.name;
-    const default_value = parameter.default.FloatParam;
-    const minimum = parameter.restriction.FloatRangeRestriction.lower;
-    const maximum = parameter.restriction.FloatRangeRestriction.upper;
-    const index = parameter.id;
+    const default_value = parameter.default_value;
+    const minimum = parameter.lower;
+    const maximum = parameter.upper;
+    const index = parameter.parameter_id;
 
     let value = formValues[index];
 
@@ -205,13 +205,13 @@ export function FloatRange(parameter, formValues, setFormValues, onStlChange) {
 // A TextField used to represent the StringLengthRestriction
 export function StringLength(parameter, formValues, setFormValues, onStlChange) {
     const name = parameter.name;
-    const maximum = parameter.restriction.StringLengthRestriction;
-    const index = parameter.id;
+    const length = parameter.length;
+    const index = parameter.parameter_id;
 
     let value = formValues[index];
 
     const handleInputChange = (event) => {
-        if (event.target.value.length <= maximum) {
+        if (event.target.value.length <= length) {
             setFormValues({
                 ...formValues,
                 [index]: (event.target.value)
@@ -285,9 +285,9 @@ function ListRestriction(name, default_value, allowed, index, formValues, setFor
 // A ListRestriction for integer parameters
 export function IntList(parameter, formValues, setFormValues, onStlChange) {
     const name = parameter.name;
-    const default_value = parameter.default.IntParam;
-    const allowed = parameter.restriction.IntListRestriction;
-    const index = parameter.id;
+    const default_value = parameter.default_value;
+    const allowed = parameter.items;
+    const index = parameter.parameter_id;
 
     return (ListRestriction(name, default_value, allowed, index, formValues, setFormValues, onStlChange))
 }
@@ -295,9 +295,9 @@ export function IntList(parameter, formValues, setFormValues, onStlChange) {
 // A ListRestriction for float parameters
 export function FloatList(parameter, formValues, setFormValues, onStlChange) {
     const name = parameter.name;
-    const default_value = parameter.default.FloatParam;
-    const allowed = parameter.restriction.FloatListRestriction;
-    const index = parameter.id;
+    const default_value = parameter.default_value;
+    const allowed = parameter.items;
+    const index = parameter.parameter_id;
 
     return (ListRestriction(name, default_value, allowed, index, formValues, setFormValues, onStlChange))
 }
@@ -305,9 +305,9 @@ export function FloatList(parameter, formValues, setFormValues, onStlChange) {
 // A ListRestriction for string parameters
 export function StringList(parameter, formValues, setFormValues, onStlChange) {
     const name = parameter.name;
-    const default_value = parameter.default.StringParam;
-    const allowed = parameter.restriction.StringListRestriction;
-    const index = parameter.id;
+    const default_value = parameter.default_value;
+    const allowed = parameter.items;
+    const index = parameter.parameter_id;
 
     return (ListRestriction(name, default_value, allowed, index, formValues, setFormValues, onStlChange))
 }
@@ -315,8 +315,8 @@ export function StringList(parameter, formValues, setFormValues, onStlChange) {
 // A checkbox that represents the BoolRestriction
 export function BoolCheck(parameter, formValues, setFormValues, onStlChange) {
     const name = parameter.name;
-    const default_value = parameter.default.BoolParam;
-    const index = parameter.id;
+    const default_value = parameter.default_value;
+    const index = parameter.parameter_id;
 
     const handleCheckChange = (event) => {
         setFormValues({
@@ -344,19 +344,19 @@ export function BoolCheck(parameter, formValues, setFormValues, onStlChange) {
 }
 
 export function RenderParam(parameter, formValues, setFormValues, onStlChange) {
-    if (parameter.restriction.IntRangeRestriction) {
-        return IntRange(parameter, formValues, setFormValues, onStlChange)
-    } else if (parameter.restriction.IntListRestriction) {
-        return IntList(parameter, formValues, setFormValues, onStlChange)
-    } else if (parameter.restriction.FloatRangeRestriction) {
-        return FloatRange(parameter, formValues, setFormValues, onStlChange)
-    } else if (parameter.restriction.FloatListRestriction) {
-        return FloatList(parameter, formValues, setFormValues, onStlChange)
-    } else if (parameter.restriction.StringLengthRestriction) {
-        return StringLength(parameter, formValues, setFormValues, onStlChange)
-    } else if (parameter.restriction.StringListRestriction) {
-        return StringList(parameter, formValues, setFormValues, onStlChange)
-    } else if (parameter.restriction.NoRestriction) {
-        return BoolCheck(parameter, formValues, setFormValues, onStlChange)
+    if (parameter.IntRange) {
+        return IntRange(parameter.IntRange, formValues, setFormValues, onStlChange)
+    } else if (parameter.IntList) {
+        return IntList(parameter.IntList, formValues, setFormValues, onStlChange)
+    } else if (parameter.FloatRange) {
+        return FloatRange(parameter.FloatRange, formValues, setFormValues, onStlChange)
+    } else if (parameter.FloatList) {
+        return FloatList(parameter.FloatList, formValues, setFormValues, onStlChange)
+    } else if (parameter.StringLength) {
+        return StringLength(parameter.StringLength, formValues, setFormValues, onStlChange)
+    } else if (parameter.StringList) {
+        return StringList(parameter.StringList, formValues, setFormValues, onStlChange)
+    } else if (parameter.Bool) {
+        return BoolCheck(parameter.Bool, formValues, setFormValues, onStlChange)
     }
 }

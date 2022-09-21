@@ -1,14 +1,12 @@
-import React from 'react';
-import {createRoot} from 'react-dom/client';
+import React, {useEffect, useState} from 'react';
+import ReactDOM from 'react-dom';
+import {BrowserRouter, Route, Routes, useParams} from 'react-router-dom';
 import './index.css';
 import GalleryView from './GalleryView';
-import ModelView from './ModelView';
-import {BrowserRouter as Router, Route, Routes,} from "react-router-dom";
 import {createTheme, CssBaseline, ThemeProvider} from "@mui/material";
 import {grey} from "@mui/material/colors";
+import ModelView from "./ModelView";
 
-const container = document.getElementById('root');
-const root = createRoot(container);
 const prefersDark = window.matchMedia("(prefers-color-scheme:dark)").matches;
 
 const light = {
@@ -29,32 +27,60 @@ const dark = {
     }
 };
 
-function render_gallery() {
-    const request = new Request("/api/models", {
-        method: 'GET',
-        headers: new Headers({
-            'Content-Type': 'application/json'
-        })
-    });
-
-    fetch(request)
-        .then(resp => resp.json())
-        .then(models => {
-            root.render(
-                <React.StrictMode>
-                    <ThemeProvider theme={prefersDark ? createTheme(dark) : createTheme(light)}>
-                        <CssBaseline />
-                        <Router>
-                            <Routes>
-                                <Route exact path="/" element={ <GalleryView models={models}/> } />
-                                <Route exact path="/:id" element={ <ModelView models={models}/> } />
-                                <Route element={ <GalleryView /> } />
-                            </Routes>
-                        </Router>
-                    </ThemeProvider>
-                </React.StrictMode>
-            );
+const RenderGalleryView = () => {
+    const [models, setModels] = useState();
+    useEffect(() => {
+        const request = new Request("/api/models", {
+            method: 'GET',
+            headers: new Headers({
+                'Content-Type': 'application/json'
+            })
         });
+
+        const getModels = async () => {
+            setModels(await (await fetch(request)).json());
+        }
+
+        getModels();
+    }, []);
+
+    return models && <GalleryView models={models}/>
+
 }
 
-render_gallery();
+const RenderModelView = () => {
+    const {id} = useParams();
+    const [model, setModel] = useState();
+
+    useEffect(() => {
+        const request = new Request("/api/models/" + id, {
+            method: 'GET',
+            headers: new Headers({
+                'Content-Type': 'application/json'
+            })
+        });
+
+        const getModel = async () => {
+            setModel(await (await fetch(request)).json());
+        }
+
+        getModel();
+    }, [])
+
+    return model && <ModelView model={model}/>
+}
+
+ReactDOM.render(
+     <React.StrictMode>
+        <ThemeProvider theme={prefersDark ? createTheme(dark) : createTheme(light)}>
+            <CssBaseline />
+            <BrowserRouter>
+                <Routes>
+                    <Route path="/" element={ <RenderGalleryView /> } />
+                    <Route path="/:id" element={ <RenderModelView /> } />
+                </Routes>
+            </BrowserRouter>
+        </ThemeProvider>
+    </React.StrictMode>,
+    document.getElementById('root')
+)
