@@ -56,9 +56,9 @@ async fn generate_part(db: &database::Db, model_id: i64, part_id: i64, params: J
                command_string: String::new()
            };
 
-           stl_instance.gen_command_string(part.name, model.scad_path);
-           let full_path: PathBuf = canonicalize(stl_instance.get_identifier()).expect("Could not resolve .stl file path");
+           stl_instance.gen_command_string(part.name, state.build_path.join(model.scad_path).to_str().unwrap().to_string());
 
+           let path: String = stl_instance.get_identifier();
            let exists: bool = stl_instance.does_stl_exist(&state.build_path);
            let enough_space: bool = stl_instance.is_enough_space(&state.build_path, state.model_limit).expect(&format!("Could not read 'stls/' directory in {}", &state.build_path.to_str().unwrap()));
 
@@ -67,12 +67,12 @@ async fn generate_part(db: &database::Db, model_id: i64, part_id: i64, params: J
                    .expect("Could not create part instance locally");
                database::create_instance(db, database::Instance {
                    part_id,
-                   path: full_path.to_str().unwrap().to_string(),
+                   path: path.to_string(),
                    usage: None,
                    age: None
                })
                    .await
-                   .expect(&format!("Could not create part instance with path {} in database", full_path.to_str().unwrap().to_string()));
+                   .expect(&format!("Could not create part instance with path {} in database", path.to_string()));
            } else if !exists && !enough_space {
                let least_valuable: database::Instance = database::find_least_valuable_instance(db).await
                    .expect("Could not find 'least valuable' instance in database");
@@ -82,15 +82,15 @@ async fn generate_part(db: &database::Db, model_id: i64, part_id: i64, params: J
                    .expect(&format!("Could not remove instance with path {} from database", &least_valuable.path));
                database::create_instance(db, database::Instance {
                    part_id,
-                   path: full_path.to_str().unwrap().to_string(),
+                   path: path.to_string(),
                    usage: None,
                    age: None
                })
                    .await
-                   .expect(&format!("Could not create part instance with path {} in database", full_path.to_str().unwrap().to_string()));
+                   .expect(&format!("Could not create part instance with path {} in database", path.to_string()));
            } else {
-               database::increment_instance_usage(db, full_path.to_str().unwrap().to_string()).await
-                   .expect(&format!("Could not read part instance with path {} in database", full_path.to_str().unwrap().to_string()))
+               database::increment_instance_usage(db, path.to_string()).await
+                   .expect(&format!("Could not read part instance with path {} in database", path.to_string()))
            }
 
            return Json(GenerateInfo {

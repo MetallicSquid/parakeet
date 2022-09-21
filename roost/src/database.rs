@@ -43,6 +43,7 @@ pub async fn get_display_models(db: &Db) -> DbResult<Vec<DisplayModel>> {
 pub struct Model {
     pub model_id: i64,
     pub name: String,
+    pub author: String,
     pub scad_path: String,
     pub parts: Vec<Part>,
 }
@@ -50,15 +51,16 @@ pub struct Model {
 pub async fn get_model(db: &Db, model_id: i64) -> DbResult<Model> {
     let mut connection: PoolConnection<Sqlite> = db.0.acquire().await?;
 
-    let model_info: (String, String) = sqlx::query!("SELECT name, scad_path FROM Models WHERE model_id = ?", model_id)
+    let model_info: (String, String, String) = sqlx::query!("SELECT name, author, scad_path FROM Models WHERE model_id = ?", model_id)
         .fetch_one(&mut connection)
-        .map_ok(|model| (model.name, model.scad_path))
+        .map_ok(|model| (model.name, model.author, model.scad_path))
         .await?;
 
     Ok(Model {
         model_id,
         name: model_info.0,
-        scad_path: model_info.1,
+        author: model_info.1,
+        scad_path: model_info.2,
         parts: get_parts(db, model_id).await?
     })
 }

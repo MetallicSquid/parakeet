@@ -42,6 +42,7 @@ impl fmt::Display for InstanceError {
 
 impl Error for InstanceError {}
 
+#[derive(Debug)]
 pub enum ParamType {
     BoolParam(bool),
     IntParam(i64),
