@@ -37,7 +37,11 @@ enum Commands {
     },
     /// Index the models directory and output an 'index.json' file
     #[structopt(name = "index")]
-    Index {},
+    Index {
+        /// Attempt to restore .stl instances based on database information
+        #[structopt(short, long)]
+        restore: bool
+    }
 }
 
 #[tokio::main]
@@ -62,12 +66,12 @@ async fn main() {
             Ok(_) => println!("Successfully configured plume. Plume is now ready to use."),
             Err(error) => println!("Failed to configure plume: [{}]", error),
         },
-        Commands::Index {} => {
+        Commands::Index {restore} => {
             let path_str = config_models_path.to_str().unwrap();
             let pool: SqlitePool = SqlitePool::connect(&format!("sqlite:{}", &config_database_path.to_str().unwrap()))
                 .await
                 .expect("Failed to connect to database.");
-            match index(config_build_path, config_models_path, pool).await {
+            match index(config_build_path, config_models_path, restore, pool).await {
                 Ok(_) => println!(
                     "Successfully indexed `{}`. Outputted to `{}`",
                     path_str,
@@ -79,8 +83,8 @@ async fn main() {
     }
 }
 
-// Create an `index.json` file in the models directory linking to the relevant information
-async fn index(build_path: &PathBuf, models_path: &PathBuf, pool: SqlitePool) -> Result<(), Box<dyn Error>> {
+// Parse and index the models directory into the database
+async fn index(build_path: &PathBuf, models_path: &PathBuf, restore: bool, pool: SqlitePool) -> Result<(), Box<dyn Error>> {
     let scad_path = build_path.join("scad/");
     if !scad_path.exists() {
         fs::create_dir(&scad_path)?;
@@ -104,8 +108,9 @@ async fn index(build_path: &PathBuf, models_path: &PathBuf, pool: SqlitePool) ->
         fs::create_dir(&stls_path)?;
     }
 
-    // FIXME: Resetting the database each time is a lazy approach, diffs should probably be used
-    //        The current implementation also stops the ids from resetting to 1, which isn't great
+    let mut instances: Vec<parse::Instance> = Vec::new();
+    if restore { instances = parse::db_save_instances(&pool).await? }
+
     parse::db_reset(&pool).await?;
 
     let flattened_models = parse::traverse_models_dir(models_path, false)?;
@@ -144,6 +149,13 @@ async fn index(build_path: &PathBuf, models_path: &PathBuf, pool: SqlitePool) ->
             &build_path.join(format!("scad/{}.scad", info_json["name"].as_str().unwrap())),
         ).await?;
         model_id += 1;
+    }
+
+    if restore {
+        match parse::restore(&pool, build_path, instances).await {
+            Ok(_) => {}
+            Err(_) => println!("Models' structure has changed, restoration has failed. Run 'plume index' without '--restore' flag.")
+        }
     }
 
     Ok(())

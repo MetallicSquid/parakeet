@@ -379,12 +379,17 @@ pub async fn get_string_list_items(db: &Db, parameter_id: i64) -> DbResult<Vec<S
 pub struct Instance {
     pub part_id: i64,
     pub path: String,
+    pub command_string: String,
     pub usage: Option<i64>,
     pub age: Option<i64>
 }
 
 pub async fn create_instance(db: &Db, new_instance: Instance) -> DbResult<()> {
-    sqlx::query!("INSERT INTO Instances (part_id, path) VALUES (?, ?)", new_instance.part_id, new_instance.path)
+    sqlx::query!("INSERT INTO Instances (part_id, path, command_string) VALUES (?, ?, ?)",
+        new_instance.part_id,
+        new_instance.path,
+        new_instance.command_string
+    )
         .execute(&mut db.0.acquire().await?)
         .await?;
 
@@ -392,12 +397,13 @@ pub async fn create_instance(db: &Db, new_instance: Instance) -> DbResult<()> {
 }
 
 pub async fn find_least_valuable_instance(db: &Db) -> DbResult<Instance> {
-    let mut instances: Vec<Instance> = sqlx::query!("SELECT part_id, path, usage, age FROM Instances")
+    let mut instances: Vec<Instance> = sqlx::query!("SELECT part_id, path, command_string, usage, age FROM Instances")
         .fetch(&mut db.0.acquire().await?)
         .map_ok(|instance| {
             Instance {
                 part_id: instance.part_id,
                 path: instance.path,
+                command_string: instance.command_string,
                 usage: Some(instance.usage),
                 age: instance.age
             }

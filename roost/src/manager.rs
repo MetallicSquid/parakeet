@@ -58,7 +58,7 @@ pub struct STLInstance {
 }
 
 impl STLInstance {
-    pub fn gen_command_string(&mut self, part_name: String, scad_path: String) {
+    pub fn gen_command_string(&mut self, part_name: String, scad_path: String) -> String {
         let mut parameter_string: String = String::new();
         for parameter in &self.parameters {
             if let ParamType::IntParam(value) = &parameter.1 {
@@ -76,20 +76,17 @@ impl STLInstance {
         let part_scad: String = format!("{}({});", part_name, parameter_string);
 
         self.command_string = format!("use <{}>;{}", scad_path, part_scad);
+
+        self.command_string.to_string()
     }
 
     pub fn create_stl(&self, build_path: &PathBuf) -> Result<(), Box<dyn Error>> {
         let stl_path: PathBuf = Path::join(build_path, &self.get_identifier());
 
-        let command: Output = Command::new("sh")
+        Command::new("sh")
             .arg("-c")
             .arg(format!("echo \"{}\" | openscad -o {} /dev/stdin", &self.command_string, stl_path.to_str().unwrap()))
-            .output()
-            .expect("Could not generate .stl output");
-
-        if !command.status.success() {
-            Err(InstanceError::ScadError(stl_path.to_str().unwrap().to_string()))?
-        }
+            .output()?;
 
         Ok(())
     }

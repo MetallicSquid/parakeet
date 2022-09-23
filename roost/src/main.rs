@@ -56,7 +56,7 @@ async fn generate_part(db: &database::Db, model_id: i64, part_id: i64, params: J
                command_string: String::new()
            };
 
-           stl_instance.gen_command_string(part.name, state.build_path.join(model.scad_path).to_str().unwrap().to_string());
+           let command_string: String = stl_instance.gen_command_string(part.name, state.build_path.join(model.scad_path).to_str().unwrap().to_string());
 
            let path: String = stl_instance.get_identifier();
            let exists: bool = stl_instance.does_stl_exist(&state.build_path);
@@ -68,6 +68,7 @@ async fn generate_part(db: &database::Db, model_id: i64, part_id: i64, params: J
                database::create_instance(db, database::Instance {
                    part_id,
                    path: path.to_string(),
+                   command_string,
                    usage: None,
                    age: None
                })
@@ -83,6 +84,7 @@ async fn generate_part(db: &database::Db, model_id: i64, part_id: i64, params: J
                database::create_instance(db, database::Instance {
                    part_id,
                    path: path.to_string(),
+                   command_string,
                    usage: None,
                    age: None
                })

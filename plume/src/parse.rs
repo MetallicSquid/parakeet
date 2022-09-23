@@ -5,6 +5,7 @@ use std::path::PathBuf;
 use std::{fmt, fs};
 use std::fs::canonicalize;
 use std::io::Read;
+use std::process::{Command, Output};
 use sqlx::Acquire;
 use sqlx::sqlite::SqlitePool;
 
@@ -390,7 +391,6 @@ pub async fn db_reset(pool: &SqlitePool) -> Result<(), Box<dyn Error>> {
             .execute(&mut connection)
             .await?;
     }
-
     Ok(())
 }
 
@@ -623,3 +623,63 @@ async fn db_add_string_list_item(pool: &SqlitePool, value: &str, parameter_id: i
 //
 //     Ok(())
 // }
+
+pub struct Instance {
+    path: String,
+    command_string: String,
+    usage: i64,
+    part_id: i64
+}
+
+pub async fn db_save_instances(pool: &SqlitePool) -> Result<Vec<Instance>, Box<dyn Error>> {
+    let mut connection = pool.acquire().await?;
+
+    Ok(sqlx::query_as!(Instance, "SELECT path, command_string, usage, part_id FROM Instances")
+        .fetch_all(&mut connection)
+        .await?)
+}
+
+pub async fn restore(pool: &SqlitePool, build_path: &PathBuf, mut instances: Vec<Instance>) -> Result<(), Box<dyn Error>> {
+    let mut connection = pool.acquire().await?;
+
+    for i in 0..instances.len() {
+        let stl_path = build_path.join(&instances[i].path);
+
+        if stl_path.exists() {
+            // FIXME: Further checks should definitely be made to ensure that instances are linked correctly to parts
+            println!("Instance at {} already exists, no need to restore. Skipping.", &instances[i].path);
+
+            sqlx::query!("INSERT INTO Instances (path, command_string, usage, part_id) VALUES (?, ?, ?, ?)",
+                instances[i].path,
+                instances[i].command_string,
+                instances[i].usage,
+                instances[i].part_id
+            )
+                .execute(&mut connection)
+                .await?;
+        } else {
+            println!("Instance at {} does not exist. Attempting to restore.", &instances[i].path);
+
+            match Command::new("sh")
+                .arg("-c")
+                .arg(format!("echo \"{}\" | openscad -o {} /dev/stdin", &instances[i].command_string, stl_path.to_str().unwrap()))
+                .output() {
+                Ok(_) => {
+                    println!("\t -> Success.");
+
+                    sqlx::query!("INSERT INTO Instances (path, command_string, usage, part_id) VALUES (?, ?, ?, ?)",
+                        instances[i].path,
+                        instances[i].command_string,
+                        instances[i].usage,
+                        instances[i].part_id
+                    )
+                    .execute(&mut connection)
+                    .await?;
+                },
+                Err(_) => println!("\t -> Failure. Removing instance.")
+            }
+        }
+    }
+
+    Ok(())
+}
