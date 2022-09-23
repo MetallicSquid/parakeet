@@ -4,7 +4,7 @@ mod database;
 #[macro_use]
 extern crate rocket;
 
-use rocket::fs::FileServer;
+use rocket::fs::{FileServer, NamedFile};
 use rocket::serde::{Serialize, json::Json};
 use serde_json::Value;
 use std::fs;
@@ -110,7 +110,9 @@ async fn generate_part(db: &database::Db, model_id: i64, part_id: i64, params: J
 
 // FIXME: Shouldn't really have to resort to this hack
 #[get["/<_id>"]]
-fn pass(_id: &str) {}
+async fn pass(_id: i64, state: &State<manager::ParakeetConfig>) -> Option<NamedFile> {
+    NamedFile::open(&state.build_path.join("index.html")).await.ok()
+}
 
 #[rocket::main]
 async fn main() -> Result<(), rocket::Error> {
