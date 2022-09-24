@@ -44,6 +44,7 @@ pub struct Model {
     pub model_id: i64,
     pub name: String,
     pub author: String,
+    pub description: String,
     pub scad_path: String,
     pub parts: Vec<Part>,
 }
@@ -51,16 +52,17 @@ pub struct Model {
 pub async fn get_model(db: &Db, model_id: i64) -> DbResult<Model> {
     let mut connection: PoolConnection<Sqlite> = db.0.acquire().await?;
 
-    let model_info: (String, String, String) = sqlx::query!("SELECT name, author, scad_path FROM Models WHERE model_id = ?", model_id)
+    let model_info: (String, String, String, String) = sqlx::query!("SELECT name, author, description, scad_path FROM Models WHERE model_id = ?", model_id)
         .fetch_one(&mut connection)
-        .map_ok(|model| (model.name, model.author, model.scad_path))
+        .map_ok(|model| (model.name, model.author, model.description, model.scad_path))
         .await?;
 
     Ok(Model {
         model_id,
         name: model_info.0,
         author: model_info.1,
-        scad_path: model_info.2,
+        description: model_info.2,
+        scad_path: model_info.3,
         parts: get_parts(db, model_id).await?
     })
 }
@@ -93,7 +95,7 @@ pub async fn get_parts(db: &Db, model_id: i64) -> DbResult<Vec<Part>> {
     Ok(parts)
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 pub enum Parameter {
     IntRange(IntRangeParameter),
     FloatRange(FloatRangeParameter),
@@ -132,7 +134,7 @@ pub async fn get_parameters(db: &Db, part_id: i64) -> DbResult<Vec<Parameter>> {
     Ok(parameters)
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 pub struct IntRangeParameter {
     pub parameter_id: i64,
     pub name: String,
@@ -161,7 +163,7 @@ pub async fn get_int_range_parameters(db: &Db, part_id: i64) -> DbResult<Vec<Par
         .await?)
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 pub struct FloatRangeParameter {
     pub parameter_id: i64,
     pub name: String,
@@ -190,7 +192,7 @@ pub async fn get_float_range_parameters(db: &Db, part_id: i64) -> DbResult<Vec<P
         .await?)
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 pub struct StringLengthParameter {
     pub parameter_id: i64,
     pub name: String,
@@ -217,7 +219,7 @@ pub async fn get_string_length_parameters(db: &Db, part_id: i64) -> DbResult<Vec
         .await?)
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 pub struct BoolParameter {
     pub parameter_id: i64,
     pub name: String,
@@ -242,7 +244,7 @@ pub async fn get_bool_parameters(db: &Db, part_id: i64) -> DbResult<Vec<Paramete
         .await?)
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 pub struct IntListParameter {
     pub parameter_id: i64,
     pub name: String,
@@ -287,7 +289,7 @@ pub async fn get_int_list_items(db: &Db, parameter_id: i64) -> DbResult<Vec<i64>
         .await?)
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 pub struct FloatListParameter {
     pub parameter_id: i64,
     pub name: String,
@@ -331,7 +333,7 @@ pub async fn get_float_list_items(db: &Db, parameter_id: i64) -> DbResult<Vec<f6
         .await?)
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 pub struct StringListParameter {
     pub parameter_id: i64,
     pub name: String,

@@ -113,15 +113,19 @@ async fn index(build_path: &PathBuf, models_path: &PathBuf, restore: bool, pool:
 
     parse::db_reset(&pool).await?;
 
+    let mut id_counter: parse::IdCounter = parse::IdCounter {
+        model_id: 0,
+        part_id: 0,
+        parameter_id: 0
+    };
     let flattened_models = parse::traverse_models_dir(models_path, false)?;
-    let mut model_id: i64 = 0;
     for entry in flattened_models {
         let info_string = fs::read_to_string(&entry.2)?;
         let info_json: Value = serde_json::from_str(&info_string)?;
 
         parse::db_add_model(
             &pool,
-            model_id,
+            id_counter.model_id,
             info_json["name"].as_str().unwrap(),
             info_json["date"].as_str().unwrap(),
             info_json["description"].as_str().unwrap(),
@@ -145,10 +149,10 @@ async fn index(build_path: &PathBuf, models_path: &PathBuf, restore: bool, pool:
             &pool,
             &info_json["parts"].as_array().unwrap(),
             info_json["name"].as_str().unwrap(),
-            model_id,
+            &mut id_counter,
             &build_path.join(format!("scad/{}.scad", info_json["name"].as_str().unwrap())),
         ).await?;
-        model_id += 1;
+        id_counter.model_id += 1;
     }
 
     if restore {

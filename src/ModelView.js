@@ -6,7 +6,7 @@ import {
     Axes,
     GridPlane,
 } from "./CanvasElements";
-import {ButtonDownload, ModelDimensions, TimeSinceUpdate} from "./ModelInfo"
+import {ButtonDownload, ModelDimensions, PartPagination, TimeSinceUpdate} from "./ModelInfo"
 import {
     CheckAutoRotate,
     CheckAxes,
@@ -26,7 +26,8 @@ import {
     List,
     ListItem,
     ListItemText,
-    ListItemIcon
+    ListItemIcon,
+    Pagination, Container
 } from "@mui/material";
 import {Canvas} from "@react-three/fiber";
 import {AccessTime, Straighten} from "@mui/icons-material";
@@ -34,20 +35,16 @@ import {AccessTime, Straighten} from "@mui/icons-material";
 function ParamView(props) {
     return (
         <>
-            {props.parts.map((part) => {
-                return (
-                    <div style={{width: "100%"}}>
-                        <Typography variant="h6" className="Module-subtitle"><b>{part.name}</b></Typography>
-                        <div style={{width: "100%"}}>
-                            {part.parameters.map((parameter, index) => {
-                                return (
-                                    RenderParam(parameter, props.formValues, props.setFormValues, props.onStlChange)
-                                );
-                            })}
-                        </div>
-                    </div>
-                );
-            })}
+            <div style={{width: "100%"}}>
+                <Typography variant="h6" className="Module-subtitle"><b>{props.part.name}</b></Typography>
+                <div style={{width: "100%"}}>
+                    {props.part.parameters.map((parameter) => {
+                        return (
+                            RenderParam(parameter, props.formValues, props.setFormValues, props.onStlChange)
+                        );
+                    })}
+                </div>
+            </div>
         </>
     )
 }
@@ -71,30 +68,34 @@ function genStl(model_id, part_id, formValues, setStl, setDimensions) {
 }
 
 function ModelView(props) {
-    console.log(props.model)
-    let default_values = {};
-    for (let part of props.model.parts) {
-        for (let i = 0; i < part.parameters.length; i++) {
-            if (part.parameters[i].IntRange) {
-                default_values[i] = part.parameters[i].IntRange.default_value;
-            } else if (part.parameters[i].FloatRange) {
-                default_values[i] = part.parameters[i].FloatRange.default_value;
-            } else if (part.parameters[i].StringLength) {
-                default_values[i] = part.parameters[i].StringLength.default_value;
-            } else if (part.parameters[i].Bool) {
-                default_values[i] = part.parameters[i].Bool.default_value;
-            } else if (part.parameters[i].IntList) {
-                default_values[i] = part.parameters[i].IntList.default_value;
-            } else if (part.parameters[i].FloatList) {
-                default_values[i] = part.parameters[i].FloatList.default_value;
+    let default_values = [];
+    for (let i = 0; i < props.model.parts.length; i++) {
+        let current_values = {};
+        let parameters = props.model.parts[i].parameters;
+        for (let j = 0; j < parameters.length; j++) {
+            if (parameters[j].IntRange) {
+                current_values[parameters[j].IntRange.parameter_id] = parameters[j].IntRange.default_value;
+            } else if (parameters[j].FloatRange) {
+                current_values[parameters[j].FloatRange.parameter_id] = parameters[j].FloatRange.default_value;
+            } else if (parameters[j].StringLength) {
+                current_values[parameters[j].StringLength.parameter_id] = parameters[j].StringLength.default_value;
+            } else if (parameters[j].Bool) {
+                current_values[parameters[j].Bool.parameter_id] = parameters[j].Bool.default_value;
+            } else if (parameters[j].IntList) {
+                current_values[parameters[j].IntList.parameter_id] = parameters[j].IntList.default_value;
+            } else if (parameters[j].FloatList) {
+                current_values[parameters[j].FloatList.parameter_id] = parameters[j].FloatList.default_value;
             } else {
-                default_values[i] = part.parameters[i].StringList.default_value;
+                current_values[parameters[j].StringList.parameter_id] = parameters[j].StringList.default_value;
             }
         }
+        default_values.push(current_values);
     }
 
-    const [formValues, setFormValues] = useState(default_values);
-    const [committedValues, setCommittedValues] = useState(default_values);
+    const [partIndex, setPartIndex] = useState(0);
+
+    const [formValues, setFormValues] = useState(default_values[partIndex]);
+    const [committedValues, setCommittedValues] = useState(default_values[partIndex]);
 
     const [stl, setStl] = useState("");
     const [dimensions, setDimensions] = useState([0.0, 0.0, 0.0])
@@ -108,10 +109,18 @@ function ModelView(props) {
     const [updateTime, setUpdateTime] = useState((new Date()));
 
     useEffect(() => {
-        genStl(props.model.model_id, props.model.parts[0].part_id, committedValues, setStl, setDimensions);
+        genStl(props.model.model_id, props.model.parts[partIndex].part_id, committedValues, setStl, setDimensions);
         setUpdateTime((new Date()));
     }, [committedValues])
 
+    useEffect(() => {
+        setFormValues(default_values[partIndex]);
+        setCommittedValues(default_values[partIndex]);
+    }, [partIndex])
+
+    const onPartChange = (_event, value) => {
+        setPartIndex(value - 1);
+    }
 
     const onStlChange = (index, value) => {
         setCommittedValues({
@@ -141,8 +150,8 @@ function ModelView(props) {
     }
 
     const onParametersReset = () => {
-        setFormValues(default_values);
-        setCommittedValues(default_values);
+        setFormValues(default_values[partIndex]);
+        setCommittedValues(default_values[partIndex]);
     }
 
     return (
@@ -167,12 +176,19 @@ function ModelView(props) {
                             </ListItem>
                             <Divider />
                             <ListItem>
-                                <Typography className="Description-text">{props.model.description}</Typography>
+                                <div>
+                                    <Typography className="Description-text">{props.model.description}</Typography>
+                                    {/* TODO: Actually implement multi-part support */}
+                                    <PartPagination
+                                        numberOfParts={props.model.parts.length}
+                                        handleChange={onPartChange}
+                                    />
+                                </div>
                             </ListItem>
                             <Divider />
                             <ListItem>
                                 <ParamView
-                                    parts={props.model.parts}
+                                    part={props.model.parts[partIndex]}
                                     formValues={formValues}
                                     setFormValues={setFormValues}
                                     onStlChange={onStlChange}
@@ -216,10 +232,11 @@ function ModelView(props) {
                                             <ModelDimensions dimensions={dimensions} />
                                         </ListItemText>
                                     </ListItem>
-                                    <ListItem>
-                                        <ButtonDownload stl={stl}/>
-                                    </ListItem>
                                 </List>
+                            </ListItem>
+                            <Divider />
+                            <ListItem>
+                                <ButtonDownload stl={stl}/>
                             </ListItem>
                         </List>
                     </Paper>

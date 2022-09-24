@@ -92,14 +92,19 @@ impl fmt::Display for RestrictionError {
 
 impl Error for RestrictionError {}
 
+pub struct IdCounter {
+    pub model_id: i64,
+    pub part_id: i64,
+    pub parameter_id: i64
+}
+
 // Parse the json parameters and validate their types and restrictions
 pub async fn parse_parameters(
     pool: &SqlitePool,
     parameters: &Vec<Value>,
-    part_id: i64,
+    id_counter: &mut IdCounter,
     model_name: &str
 ) -> Result<(), Box<dyn Error>> {
-    let mut parameter_id: i64 = 0;
     for parameter in parameters {
         if parameter["default"].is_boolean() {
             // Bool parameter
@@ -110,12 +115,12 @@ pub async fn parse_parameters(
             {
                 db_add_bool_parameter(
                     pool,
-                    parameter_id,
+                    id_counter.parameter_id,
                     parameter["name"].as_str().unwrap(),
                     parameter["default"].as_bool().unwrap(),
-                    part_id
+                    id_counter.part_id
                 ).await?;
-                parameter_id += 1;
+                id_counter.parameter_id += 1;
             } else {
                 Err(ParamError::InvalidFormatting(
                     parameter["name"].as_str().unwrap().to_string(),
@@ -132,26 +137,26 @@ pub async fn parse_parameters(
                 if parameter["lower"].as_i64() < parameter["upper"].as_i64() {
                     db_add_int_range_parameter(
                         pool,
-                        parameter_id,
+                        id_counter.parameter_id,
                         parameter["name"].as_str().unwrap(),
                         parameter["default"].as_i64().unwrap(),
                         parameter["lower"].as_i64().unwrap(),
                         parameter["upper"].as_i64().unwrap(),
-                        part_id
+                        id_counter.part_id
                     ).await?;
-                    parameter_id += 1;
+                    id_counter.parameter_id += 1;
                 } else if parameter["lower"].as_i64() > parameter["upper"].as_i64() {
                     println!("Warning: 'lower' and 'upper' fields for the '{}' parameter in the '{}' model have been swapped", parameter["name"], model_name);
                     db_add_int_range_parameter(
                         pool,
-                        parameter_id,
+                        id_counter.parameter_id,
                         parameter["name"].as_str().unwrap(),
                         parameter["default"].as_i64().unwrap(),
                         parameter["upper"].as_i64().unwrap(),
                         parameter["lower"].as_i64().unwrap(),
-                        part_id
+                        id_counter.part_id
                     ).await?;
-                    parameter_id += 1;
+                    id_counter.parameter_id += 1;
                 } else {
                     Err(RestrictionError::InvalidRange(
                         parameter["name"].as_str().unwrap().to_string(),
@@ -165,10 +170,10 @@ pub async fn parse_parameters(
                 // List restricted
                 db_add_int_list_parameter(
                     pool,
-                    parameter_id,
+                    id_counter.parameter_id,
                     parameter["name"].as_str().unwrap(),
                     parameter["default"].as_i64().unwrap(),
-                    part_id
+                    id_counter.part_id
                 ).await?;
 
                 let mut allowed: Vec<i64> = Vec::new();
@@ -179,7 +184,7 @@ pub async fn parse_parameters(
                             db_add_int_list_item(
                                 pool,
                                 int_element,
-                                parameter_id
+                                id_counter.parameter_id
                             ).await?;
                         } else {
                             println!("Warning: ignored duplicate value of '{}' in the 'allowed' field for the '{}' parameter in the '{}' model", int_element, parameter["name"], model_name);
@@ -190,7 +195,7 @@ pub async fn parse_parameters(
                         ))?;
                     }
                 }
-                parameter_id += 1;
+                id_counter.parameter_id += 1;
             } else {
                 Err(ParamError::InvalidFormatting(
                     parameter["name"].as_str().unwrap().to_string(),
@@ -207,26 +212,26 @@ pub async fn parse_parameters(
                 if parameter["lower"].as_f64() < parameter["upper"].as_f64() {
                     db_add_float_range_parameter(
                         pool,
-                        parameter_id,
+                        id_counter.parameter_id,
                         parameter["name"].as_str().unwrap(),
                         parameter["default"].as_f64().unwrap(),
                         parameter["lower"].as_f64().unwrap(),
                         parameter["upper"].as_f64().unwrap(),
-                        part_id
+                        id_counter.part_id
                     ).await?;
-                    parameter_id += 1;
+                    id_counter.parameter_id += 1;
                 } else if parameter["lower"].as_f64() > parameter["upper"].as_f64() {
                     println!("Warning: 'lower' and 'upper' fields for the '{}' parameter in the '{}' model have been swapped", parameter["name"], model_name);
                     db_add_float_range_parameter(
                         pool,
-                        parameter_id,
+                        id_counter.parameter_id,
                         parameter["name"].as_str().unwrap(),
                         parameter["default"].as_f64().unwrap(),
                         parameter["upper"].as_f64().unwrap(),
                         parameter["lower"].as_f64().unwrap(),
-                        part_id
+                        id_counter.part_id
                     ).await?;
-                    parameter_id += 1;
+                    id_counter.parameter_id += 1;
                 } else {
                     Err(RestrictionError::InvalidRange(
                         parameter["name"].as_str().unwrap().to_string(),
@@ -240,10 +245,10 @@ pub async fn parse_parameters(
                 // List restricted
                 db_add_float_list_parameter(
                     pool,
-                    parameter_id,
+                    id_counter.parameter_id,
                     parameter["name"].as_str().unwrap(),
                     parameter["default"].as_f64().unwrap(),
-                    part_id
+                    id_counter.part_id
                 ).await?;
 
                 let mut allowed: Vec<f64> = Vec::new();
@@ -254,7 +259,7 @@ pub async fn parse_parameters(
                             db_add_float_list_item(
                                 pool,
                                 float_element,
-                                parameter_id
+                                id_counter.parameter_id
                             ).await?;
                         } else {
                             println!("Warning: ignored duplicate value of '{}' in the 'allowed' field for the '{}' parameter in the '{}' model", float_element, parameter["name"], model_name);
@@ -265,7 +270,7 @@ pub async fn parse_parameters(
                         ))?;
                     }
                 }
-                parameter_id += 1;
+                id_counter.parameter_id += 1;
             } else {
                 Err(ParamError::InvalidFormatting(
                     parameter["name"].as_str().unwrap().to_string(),
@@ -282,13 +287,13 @@ pub async fn parse_parameters(
                 if parameter["length"].as_i64().unwrap() > 0 {
                     db_add_string_length_parameter(
                         pool,
-                        parameter_id,
+                        id_counter.parameter_id,
                         parameter["name"].as_str().unwrap(),
                         parameter["default"].as_str().unwrap(),
                         parameter["length"].as_i64().unwrap(),
-                        part_id
+                        id_counter.part_id
                     ).await?;
-                    parameter_id += 1;
+                    id_counter.parameter_id += 1;
                 } else {
                     Err(RestrictionError::InvalidRange(
                         parameter["name"].as_str().unwrap().to_string(),
@@ -302,10 +307,10 @@ pub async fn parse_parameters(
                 // List restricted
                 db_add_string_list_parameter(
                     pool,
-                    parameter_id,
+                    id_counter.parameter_id,
                     parameter["name"].as_str().unwrap(),
                     parameter["default"].as_str().unwrap(),
-                    part_id
+                    id_counter.part_id
                 ).await?;
 
                 let mut allowed: Vec<&str> = Vec::new();
@@ -316,7 +321,7 @@ pub async fn parse_parameters(
                             db_add_string_list_item(
                                 pool,
                                 string_element,
-                                parameter_id
+                                id_counter.parameter_id
                             ).await?;
                         } else {
                             println!("Warning: ignored duplicate value of '{}' in the 'allowed' field for the '{}' parameter in the '{}' model", string_element, parameter["name"], model_name);
@@ -327,7 +332,7 @@ pub async fn parse_parameters(
                         ))?;
                     }
                 }
-                parameter_id += 1;
+                id_counter.parameter_id += 1;
             } else {
                 Err(ParamError::InvalidFormatting(
                     parameter["name"].as_str().unwrap().to_string(),
@@ -363,18 +368,17 @@ impl fmt::Display for PartError {
 impl Error for PartError {}
 
 // Parse the json modules and the parameters that they contain ensuring existence and restrictions
-pub async fn parse_parts(pool: &SqlitePool, parts: &Vec<Value>, model_name: &str, model_id: i64, _scad_path: &PathBuf) -> Result<(), Box<dyn Error>> {
-    let mut part_id: i64 = 0;
+pub async fn parse_parts(pool: &SqlitePool, parts: &Vec<Value>, model_name: &str, id_counter: &mut IdCounter, _scad_path: &PathBuf) -> Result<(), Box<dyn Error>> {
     for part in parts {
         db_add_part(
             pool,
-            part_id,
+            id_counter.part_id,
             part["name"].as_str().unwrap(),
-            model_id
+            id_counter.model_id
         ).await?;
 
-        parse_parameters(pool, &part["parameters"].as_array().unwrap(), part_id, model_name).await?;
-        part_id += 1;
+        parse_parameters(pool, &part["parameters"].as_array().unwrap(), id_counter, model_name).await?;
+        id_counter.part_id += 1;
     }
 
     // validate_scad(&parsed_modules, scad_path)?;
