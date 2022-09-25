@@ -20,7 +20,6 @@ CREATE TABLE Instances (
     path VARCHAR NOT NULL PRIMARY KEY,
     command_string VARCHAR NOT NULL,
     usage INTEGER NOT NULL DEFAULT 0,
-    age INTEGER AUTO_INCREMENT,
     part_id INTEGER NOT NULL,
     FOREIGN KEY (part_id)
        REFERENCES Parts (part_id)
