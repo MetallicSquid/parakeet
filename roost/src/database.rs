@@ -377,7 +377,7 @@ pub async fn get_string_list_items(db: &Db, parameter_id: i64) -> DbResult<Vec<S
         .await?)
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Instance {
     pub part_id: i64,
     pub path: String,
@@ -398,8 +398,8 @@ pub async fn create_instance(db: &Db, new_instance: Instance) -> DbResult<()> {
     Ok(())
 }
 
-pub async fn find_least_valuable_instance(db: &Db) -> DbResult<Instance> {
-    let mut instances: Vec<Instance> = sqlx::query!("SELECT part_id, path, command_string, usage, age FROM Instances")
+pub async fn find_least_valuable_instance(db: &Db, deletion_buffer: i64) -> DbResult<Vec<Instance>> {
+    let mut instances: Vec<Instance> = sqlx::query!("SELECT part_id, path, command_string, usage, rowid FROM Instances")
         .fetch(&mut db.0.acquire().await?)
         .map_ok(|instance| {
             Instance {
@@ -407,7 +407,7 @@ pub async fn find_least_valuable_instance(db: &Db) -> DbResult<Instance> {
                 path: instance.path,
                 command_string: instance.command_string,
                 usage: Some(instance.usage),
-                age: instance.age
+                age: Some(instance.rowid)
             }
         })
         .try_collect::<Vec<Instance>>()
@@ -415,12 +415,12 @@ pub async fn find_least_valuable_instance(db: &Db) -> DbResult<Instance> {
 
     instances.sort_by_key(|instance| instance.usage.unwrap());
 
-    let last = instances[instances.len() - 1].usage.unwrap();
-    instances.retain(|instance| instance.usage.unwrap() == last);
+    let lowest_usage= instances[0].usage.unwrap();
+    instances.retain(|instance| instance.usage.unwrap() == lowest_usage);
 
     instances.sort_by_key(|instance| instance.age.unwrap());
 
-    Ok(instances[0].clone())
+    Ok(Vec::from(&instances[0..deletion_buffer as usize]))
 }
 
 pub async fn remove_instance(db: &Db, path: &str) -> DbResult<()> {

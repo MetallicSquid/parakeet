@@ -75,12 +75,20 @@ async fn generate_part(db: &database::Db, model_id: i64, part_id: i64, params: J
                    .await
                    .expect(&format!("Could not create part instance with path {} in database", path.to_string()));
            } else if !exists && !enough_space {
-               let least_valuable: database::Instance = database::find_least_valuable_instance(db).await
+               let least_valuable: Vec<database::Instance> = database::find_least_valuable_instance(db, 5)
+                   .await
                    .expect("Could not find 'least valuable' instance in database");
-               fs::remove_file(&least_valuable.path)
-                   .expect(&format!("Could not delete file at {}", &least_valuable.path));
-               database::remove_instance(db, &least_valuable.path).await
-                   .expect(&format!("Could not remove instance with path {} from database", &least_valuable.path));
+
+               for instance in least_valuable {
+                   fs::remove_file(&state.build_path.join(&instance.path))
+                       .expect(&format!("Could not delete file at {}", &instance.path));
+                   database::remove_instance(db, &instance.path)
+                       .await
+                       .expect(&format!("Could not remove instance with path {} from database", &instance.path));
+               }
+
+               stl_instance.create_stl(&state.build_path)
+                   .expect("Could not create part instance locally");
                database::create_instance(db, database::Instance {
                    part_id,
                    path: path.to_string(),
@@ -91,7 +99,8 @@ async fn generate_part(db: &database::Db, model_id: i64, part_id: i64, params: J
                    .await
                    .expect(&format!("Could not create part instance with path {} in database", path.to_string()));
            } else {
-               database::increment_instance_usage(db, path.to_string()).await
+               database::increment_instance_usage(db, path.to_string())
+                   .await
                    .expect(&format!("Could not read part instance with path {} in database", path.to_string()))
            }
 

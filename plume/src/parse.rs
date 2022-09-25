@@ -677,8 +677,8 @@ pub async fn restore(pool: &SqlitePool, build_path: &PathBuf, mut instances: Vec
                         instances[i].usage,
                         instances[i].part_id
                     )
-                    .execute(&mut connection)
-                    .await?;
+                        .execute(&mut connection)
+                        .await?;
                 },
                 Err(_) => println!("\t -> Failure. Removing instance.")
             }
