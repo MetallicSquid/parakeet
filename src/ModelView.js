@@ -95,7 +95,7 @@ function ModelView(props) {
     const [partIndex, setPartIndex] = useState(0);
 
     const [formValues, setFormValues] = useState(default_values[partIndex]);
-    const [committedValues, setCommittedValues] = useState(default_values[partIndex]);
+    const [committedValues, setCommittedValues] = useState(default_values);
 
     const [stl, setStl] = useState("");
     const [dimensions, setDimensions] = useState([0.0, 0.0, 0.0])
@@ -109,13 +109,14 @@ function ModelView(props) {
     const [updateTime, setUpdateTime] = useState((new Date()));
 
     useEffect(() => {
-        genStl(props.model.model_id, props.model.parts[partIndex].part_id, committedValues, setStl, setDimensions);
+        genStl(props.model.model_id, props.model.parts[partIndex].part_id, committedValues[partIndex], setStl, setDimensions);
         setUpdateTime((new Date()));
     }, [committedValues])
 
     useEffect(() => {
-        setFormValues(default_values[partIndex]);
-        setCommittedValues(default_values[partIndex]);
+        genStl(props.model.model_id, props.model.parts[partIndex].part_id, committedValues[partIndex], setStl, setDimensions);
+        setUpdateTime((new Date()));
+        setFormValues(committedValues[partIndex]);
     }, [partIndex])
 
     const onPartChange = (_event, value) => {
@@ -123,10 +124,12 @@ function ModelView(props) {
     }
 
     const onStlChange = (index, value) => {
-        setCommittedValues({
-            ...committedValues,
+        let newValues = [...committedValues]
+        newValues.splice(partIndex, 1, {
+            ...newValues[partIndex],
             [index]: value
         })
+        setCommittedValues(newValues);
     }
 
     const onAutoRotateChange = (event) => {
@@ -151,7 +154,7 @@ function ModelView(props) {
 
     const onParametersReset = () => {
         setFormValues(default_values[partIndex]);
-        setCommittedValues(default_values[partIndex]);
+        setCommittedValues(default_values);
     }
 
     return (
