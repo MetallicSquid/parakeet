@@ -15,7 +15,8 @@ export function RenderSTL(props) {
         camera.lookAt(ref.current.position);
 
         if (props.cameraReset) {
-            camera.position.set(props.dimensions[0] * 0.75, props.dimensions[1] * 0.75, props.dimensions[2] * 1.5);
+            let offset = Math.sqrt(Math.pow(props.dimensions[0], 2) + Math.pow(props.dimensions[1], 2) + Math.pow(props.dimensions[2], 2))
+            camera.position.set(props.dimensions[0] + (offset/4), props.dimensions[1] + (offset/4), props.dimensions[2] + (offset/4));
             camera.updateProjectionMatrix();
             props.setCameraReset(false);
         }

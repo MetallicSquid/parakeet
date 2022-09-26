@@ -49,7 +49,7 @@ function ParamView(props) {
     )
 }
 
-function genStl(model_id, part_id, formValues, setStl, setDimensions) {
+function genStl(model_id, part_id, formValues, setStl, setDimensions, setCameraReset=null, ) {
     const url = '/api/generate/' + model_id + '/' + part_id;
     const request = new Request(url, {
         method: 'POST',
@@ -64,6 +64,9 @@ function genStl(model_id, part_id, formValues, setStl, setDimensions) {
         .then(json => {
             setStl(json["filename"]);
             setDimensions(json["dimensions"])
+            if (setCameraReset) {
+                setCameraReset(true)
+            }
         });
 }
 
@@ -109,12 +112,25 @@ function ModelView(props) {
     const [updateTime, setUpdateTime] = useState((new Date()));
 
     useEffect(() => {
-        genStl(props.model.model_id, props.model.parts[partIndex].part_id, committedValues[partIndex], setStl, setDimensions);
+        genStl(
+            props.model.model_id,
+            props.model.parts[partIndex].part_id,
+            committedValues[partIndex],
+            setStl,
+            setDimensions
+        );
         setUpdateTime((new Date()));
     }, [committedValues])
 
     useEffect(() => {
-        genStl(props.model.model_id, props.model.parts[partIndex].part_id, committedValues[partIndex], setStl, setDimensions);
+        genStl(
+            props.model.model_id,
+            props.model.parts[partIndex].part_id,
+            committedValues[partIndex],
+            setStl,
+            setDimensions,
+            setCameraReset
+        );
         setUpdateTime((new Date()));
         setFormValues(committedValues[partIndex]);
     }, [partIndex])
